@@ -1,5 +1,5 @@
 [package]
-name = "crdt_buffer"
+name = "crdt-buffer"
 version = "0.1.0"
 edition = "2021"
 author = ["Huang Chengjie<597857074@qq.com>"]

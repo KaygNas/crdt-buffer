@@ -1,0 +1,21 @@
+{
+  "name": "crdt_buffer",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Monorepo for crdt_buffer",
+  "author": "Huang Chengjie<597857074@qq.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.12.0"
+  },
+  "scripts": {
+    "build:crdt-buffer": "wasm-pack build packages/crdt-buffer --target bundler --out-dir pkg",
+    "lint": "eslint --cache --ext .ts packages/*/src/**.ts --fix"
+  },
+  "devDependencies": {
+    "@vue/eslint-config-prettier": "^8.0.0",
+    "@vue/eslint-config-typescript": "^12.0.0",
+    "eslint": "^8.54.0",
+    "eslint-plugin-vue": "^9.18.1"
+  }
+}

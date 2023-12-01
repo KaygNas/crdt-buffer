@@ -15,7 +15,7 @@ pub struct CRDTData {
     pub uuids: Vec<String>,
     pub palette: Vec<String>,
     pub width: Width,
-    // pub data: Vec<DataItem>,
+    pub data: Vec<DataItem>,
 }
 
 pub mod chunk {
@@ -35,8 +35,7 @@ pub mod chunk {
             InfoChunk::parse(data)?,
             UuidChunk::parse(data)?,
             PaletteChunk::parse(data)?,
-            // TODO: recover
-            // DataChunk::parse(data),
+            DataChunk::parse(data)?,
         ];
         let mut bytes = Vec::new();
         for chunk in chunks {
@@ -147,56 +146,48 @@ pub mod chunk {
         length: [u8; 2],
         data: Vec<DataChunkItem>,
     }
-    // TODO: recover
-    // impl Chunkable for DataChunk {
-    //     fn parse(data: &CRDTData) -> Box<Self> {
-    //         let mut data_chunk_items = Vec::new();
-    //         for data_item in &data.data {
-    //             match data_item {
-    //                 DataItem::Pixel(uuid, timestamp, palette) => {
-    //                     data_chunk_items.push(DataChunkItem::Pixel([
-    //                         0,
-    //                         1,
-    //                         uuid.to_be_bytes()[0],
-    //                         uuid.to_be_bytes()[1],
-    //                         timestamp.to_be_bytes()[0],
-    //                         timestamp.to_be_bytes()[1],
-    //                         palette.unwrap_or(0).to_be_bytes()[0],
-    //                         palette.unwrap_or(0).to_be_bytes()[1],
-    //                     ]));
-    //                 }
-    //                 DataItem::Blank(n) => {
-    //                     data_chunk_items.push(DataChunkItem::Blank([
-    //                         0,
-    //                         0,
-    //                         n.to_be_bytes()[0],
-    //                         n.to_be_bytes()[1],
-    //                         n.to_be_bytes()[2],
-    //                         n.to_be_bytes()[3],
-    //                     ]));
-    //                 }
-    //             }
-    //         }
+    impl Chunkable for DataChunk {
+        fn parse(data: &CRDTData) -> Result<Box<Self>, String> {
+            let mut data_chunk_items = Vec::new();
+            for data_item in &data.data {
+                match data_item {
+                    DataItem::Pixel(uuid, timestamp, palette) => {
+                        data_chunk_items.push(DataChunkItem::Pixel([
+                            1,
+                            uuid.clone(),
+                            timestamp.clone(),
+                            palette.unwrap_or(0).clone(),
+                        ]));
+                    }
+                    DataItem::Blank(n) => {
+                        data_chunk_items.push(DataChunkItem::Blank([
+                            0,
+                            n.to_be_bytes()[0],
+                            n.to_be_bytes()[1],
+                        ]));
+                    }
+                }
+            }
 
-    //         Box::new(DataChunk {
-    //             type_name: str_to_ascii_bytes("DATA"),
-    //             length: len_to_bytes(data_chunk_items.len() as u32),
-    //             data: data_chunk_items,
-    //         })
-    //     }
-    //     fn to_be_bytes(&self) -> Vec<u8> {
-    //         let mut bytes = Vec::new();
-    //         bytes.extend(&self.type_name);
-    //         bytes.extend(&self.length);
-    //         for data_chunk_item in &self.data {
-    //             match data_chunk_item {
-    //                 DataChunkItem::Pixel(bs) => bytes.extend(bs),
-    //                 DataChunkItem::Blank(bs) => bytes.extend(bs),
-    //             }
-    //         }
-    //         bytes
-    //     }
-    // }
+            Ok(Box::new(DataChunk {
+                type_name: str_to_ascii_bytes("DATA"),
+                length: len_to_bytes(data_chunk_items.len() as u16),
+                data: data_chunk_items,
+            }))
+        }
+        fn to_be_bytes(&self) -> Result<Vec<u8>, String> {
+            let mut bytes = Vec::new();
+            bytes.extend(&self.type_name);
+            bytes.extend(&self.length);
+            for data_chunk_item in &self.data {
+                match data_chunk_item {
+                    DataChunkItem::Pixel(bs) => bytes.extend(bs),
+                    DataChunkItem::Blank(bs) => bytes.extend(bs),
+                }
+            }
+            Ok(bytes)
+        }
+    }
 
     /// take a utf-8 &str, assert it has 4 chars, transform the &str to ascii in bytes
     /// each char should be represent by 2 bytes.
@@ -209,12 +200,12 @@ pub mod chunk {
 
         let mut bytes = [0u8; 4];
         for (i, c) in s.chars().enumerate() {
-            // transform char to ascii into 2 bytes in the type of u8;
-            let mut ascii_bytes = c.to_ascii_uppercase().to_string().into_bytes();
+            // transform char to ascii into 1 bytes in the type of u8;
+            let ascii_bytes = c.to_ascii_uppercase().to_string().into_bytes();
             assert_eq!(
                 ascii_bytes.len(),
                 1,
-                "Each character must be represented by 2 bytes"
+                "Each character must be represented by 1 bytes"
             );
 
             bytes[i] = ascii_bytes[0];
@@ -245,20 +236,19 @@ mod test {
                 "0442197c814447f7ae64340a2df3d796".to_string(),
                 "4ae8bd76e84c4652bcd8a5e339c574f3".to_string(),
             ],
-            palette: vec!["fff".to_string(), "6c4fff".to_string()],
+            palette: vec!["ffffff".to_string(), "6c4fff".to_string()],
             width: 100,
-            // TODO: recover
-            // data: vec![
-            //     DataItem::Pixel(0, 3, Some(0)),
-            //     DataItem::Pixel(0, 4, Some(0)),
-            //     DataItem::Pixel(0, 2, None),
-            //     DataItem::Blank(97),
-            //     DataItem::Pixel(1, 2, Some(1)),
-            //     DataItem::Pixel(1, 3, Some(1)),
-            // ],
+            data: vec![
+                DataItem::Pixel(0, 3, Some(0)),
+                DataItem::Pixel(0, 4, Some(0)),
+                DataItem::Pixel(0, 2, None),
+                DataItem::Blank(97),
+                DataItem::Pixel(1, 2, Some(1)),
+                DataItem::Pixel(1, 3, Some(1)),
+            ],
         };
         let data_in_bytes = chunk::to_bytes(&data).unwrap();
 
-        assert_eq!(data_in_bytes.len(), 176);
+        assert_eq!(data_in_bytes.len(), 88);
     }
 }

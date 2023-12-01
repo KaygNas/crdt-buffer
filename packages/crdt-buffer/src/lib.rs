@@ -13,7 +13,13 @@ extern "C" {
 pub fn data_to_bytes(value: JsValue) -> Vec<u8> {
     let result = serde_wasm_bindgen::from_value::<crdt_data::CRDTData>(value);
     match result {
-        Ok(data) => crdt_data::chunk::to_bytes(&data),
+        Ok(data) => match crdt_data::chunk::to_bytes(&data) {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                error(&err);
+                Vec::new()
+            }
+        },
         Err(err) => {
             error(&err.to_string());
             Vec::new()

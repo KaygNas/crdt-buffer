@@ -11,7 +11,7 @@ console.log(
       "0442197c814447f7ae64340a2df3d796",
       "4ae8bd76e84c4652bcd8a5e339c574f3",
     ],
-    palette: ["fff", "6c4fff"],
+    palette: ["ffffff", "6c4fff"],
     width: 100,
     // TODO: recover
     // data: [

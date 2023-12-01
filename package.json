@@ -9,7 +9,7 @@
     "node": ">=18.12.0"
   },
   "scripts": {
-    "build:crdt-buffer": "wasm-pack build packages/crdt-buffer --target bundler --out-dir pkg",
+    "build:crdt-buffer": "wasm-pack build --dev packages/crdt-buffer --target bundler --out-dir pkg",
     "lint": "eslint --cache --ext .ts packages/*/src/**.ts --fix"
   },
   "devDependencies": {

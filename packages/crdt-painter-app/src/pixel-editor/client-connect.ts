@@ -1,16 +1,23 @@
+import { fromCRDTData, toCRDTData } from "./adaptor";
 import { PixelData } from "./pixel-data";
+import { data_to_bytes, bytes_to_data } from "crdt-buffer";
 
 type Listener = (state: PixelData["state"]) => void;
-
+type ByteListener = (bytes: Uint8Array) => void;
 class CentralServer {
-  #connections: Map<string, Listener> = new Map();
+  #connections: Map<string, ByteListener> = new Map();
   connect(id: string, listener: Listener) {
-    this.#connections.set(id, listener);
+    const byteListenr = (bytes: Uint8Array) => {
+      const crdtData = bytes_to_data(bytes);
+      const state = fromCRDTData(crdtData);
+      listener(state);
+    };
+    this.#connections.set(id, byteListenr);
   }
-  broadcast(fromId: string, state: PixelData["state"]) {
+  broadcast(fromId: string, bytes: Uint8Array) {
     for (const [id, listener] of this.#connections.entries()) {
       if (id === fromId) continue;
-      listener(state);
+      listener(bytes);
     }
   }
 }
@@ -36,6 +43,24 @@ export class ClientConnect {
 
   async send(state: PixelData["state"]) {
     await this.#sleep(this.#latency);
-    centralServer.broadcast(this.#id, state);
+    const crdtData = toCRDTData(state, 100 /* TODO: fix hardcode */);
+    const bytes = data_to_bytes(crdtData);
+    centralServer.broadcast(this.#id, bytes);
   }
+}
+
+const chunk = <T>(arr: T[], size: number) => {
+  const result = [];
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, size + i));
+  }
+  return result;
+};
+
+function bytestoHex(bytes: Uint8Array, perline: number) {
+  const chunks = chunk(
+    Array.from(bytes).map((n) => n.toString(16).padStart(2, "0")),
+    perline,
+  );
+  return chunks.map((chunk) => chunk.join(" ")).join("\n");
 }

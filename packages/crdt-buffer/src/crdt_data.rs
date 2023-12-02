@@ -1,16 +1,15 @@
-use hex;
 use serde::{Deserialize, Serialize};
 
 pub type Uuid = u8;
 pub type Color = Option<u8>;
 pub type Timestamp = u8;
 pub type Width = u16;
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub enum DataItem {
     Pixel(Uuid, Timestamp, Color),
     Blank(u16),
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct CRDTData {
     pub uuids: Vec<String>,
     pub palette: Vec<String>,
@@ -22,15 +21,9 @@ pub mod chunk {
 
     use super::*;
     use hex;
+    use wasm_bindgen::UnwrapThrowExt;
 
-    trait Chunkable {
-        fn parse(data: &CRDTData) -> Result<Box<Self>, String>
-        where
-            Self: Sized;
-        fn to_be_bytes(&self) -> Result<Vec<u8>, String>;
-    }
-
-    pub fn to_bytes(data: &CRDTData) -> Result<Vec<u8>, String> {
+    pub fn to_bytes(data: &CRDTData) -> Result<Vec<u8>, ChunkError> {
         let chunks: Vec<Box<dyn Chunkable>> = vec![
             InfoChunk::parse(data)?,
             UuidChunk::parse(data)?,
@@ -40,9 +33,40 @@ pub mod chunk {
         let mut bytes = Vec::new();
         for chunk in chunks {
             bytes.extend(chunk.to_be_bytes()?);
-            println!("len: {}", bytes.len());
         }
         Ok(bytes)
+    }
+
+    pub fn from_bytes(bytes: &Vec<u8>) -> Result<CRDTData, String> {
+        let iter = &mut bytes.iter();
+        let info_chunk = InfoChunk::parse_bytes(iter)?;
+        let uuid_chunk = UuidChunk::parse_bytes(iter)?;
+        let palette_chunk = PaletteChunk::parse_bytes(iter)?;
+        let data_chunk = DataChunk::parse_bytes(iter)?;
+        Ok(CRDTData {
+            uuids: uuid_chunk.to_be_data()?.uuids.unwrap(),
+            palette: palette_chunk.to_be_data()?.palette.unwrap(),
+            width: info_chunk.to_be_data()?.width.unwrap(),
+            data: data_chunk.to_be_data()?.data.unwrap(),
+        })
+    }
+
+    type ChunkError = String;
+    struct PartialCRDTData {
+        uuids: Option<Vec<String>>,
+        palette: Option<Vec<String>>,
+        width: Option<Width>,
+        data: Option<Vec<DataItem>>,
+    }
+    trait Chunkable {
+        fn parse(data: &CRDTData) -> Result<Box<Self>, ChunkError>
+        where
+            Self: Sized;
+        fn parse_bytes(bytes: &mut dyn Iterator<Item = &u8>) -> Result<Box<Self>, ChunkError>
+        where
+            Self: Sized;
+        fn to_be_bytes(&self) -> Result<Vec<u8>, ChunkError>;
+        fn to_be_data(&self) -> Result<PartialCRDTData, ChunkError>;
     }
 
     pub struct InfoChunk {
@@ -50,17 +74,55 @@ pub mod chunk {
         artboard_width: [u8; 2],
     }
     impl Chunkable for InfoChunk {
-        fn parse(data: &CRDTData) -> Result<Box<Self>, String> {
+        fn parse(data: &CRDTData) -> Result<Box<Self>, ChunkError> {
             Ok(Box::new(InfoChunk {
                 magic_number: str_to_ascii_bytes("CRDT"),
                 artboard_width: data.width.to_be_bytes(),
             }))
         }
-        fn to_be_bytes(&self) -> Result<Vec<u8>, String> {
+        fn parse_bytes(bytes: &mut dyn Iterator<Item = &u8>) -> Result<Box<Self>, ChunkError>
+        where
+            Self: Sized,
+        {
+            let mut magic_number = [0u8; 4];
+            for i in 0..4 {
+                if let Some(byte) = bytes.next() {
+                    magic_number[i] = byte.clone();
+                } else {
+                    return Err("Not enough bytes for magic_number".to_string());
+                }
+            }
+
+            if magic_number != str_to_ascii_bytes("CRDT") {
+                return Err("Magic number is not CRDT".to_string());
+            }
+
+            let mut artboard_width = [0u8; 2];
+            for i in 0..2 {
+                if let Some(byte) = bytes.next() {
+                    artboard_width[i] = byte.clone();
+                } else {
+                    return Err("Not enough bytes for artboard_width".to_string());
+                }
+            }
+            Ok(Box::new(InfoChunk {
+                magic_number,
+                artboard_width,
+            }))
+        }
+        fn to_be_bytes(&self) -> Result<Vec<u8>, ChunkError> {
             let mut bytes = Vec::new();
             bytes.extend(&self.magic_number);
             bytes.extend(&self.artboard_width);
             Ok(bytes)
+        }
+        fn to_be_data(&self) -> Result<PartialCRDTData, ChunkError> {
+            Ok(PartialCRDTData {
+                uuids: None,
+                palette: None,
+                width: Some(u16::from_be_bytes(self.artboard_width)),
+                data: None,
+            })
         }
     }
 
@@ -70,7 +132,7 @@ pub mod chunk {
         uuids: Vec<[u8; 16]>,
     }
     impl Chunkable for UuidChunk {
-        fn parse(data: &CRDTData) -> Result<Box<Self>, String> {
+        fn parse(data: &CRDTData) -> Result<Box<Self>, ChunkError> {
             let mut uuids = Vec::new();
             for uuid in &data.uuids {
                 let mut uuid_bytes = [0u8; 16];
@@ -90,7 +152,52 @@ pub mod chunk {
                 uuids,
             }))
         }
-        fn to_be_bytes(&self) -> Result<Vec<u8>, String> {
+        fn parse_bytes(bytes: &mut dyn Iterator<Item = &u8>) -> Result<Box<Self>, ChunkError>
+        where
+            Self: Sized,
+        {
+            let mut type_name = [0u8; 4];
+            for i in 0..4 {
+                if let Some(byte) = bytes.next() {
+                    type_name[i] = byte.clone();
+                } else {
+                    return Err("Not enough bytes for UuidChunk type_name".to_string());
+                }
+            }
+
+            if type_name != str_to_ascii_bytes("UUID") {
+                return Err("Type name is not UUID".to_string());
+            }
+
+            let mut length = [0u8; 2];
+            for i in 0..2 {
+                if let Some(byte) = bytes.next() {
+                    length[i] = byte.clone();
+                } else {
+                    return Err("Not enough bytes for UuidChunk length".to_string());
+                }
+            }
+
+            let mut uuids = Vec::new();
+            for _ in 0..u16::from_be_bytes(length) {
+                let mut uuid = [0u8; 16];
+                for i in 0..16 {
+                    if let Some(byte) = bytes.next() {
+                        uuid[i] = byte.clone();
+                    } else {
+                        return Err("Not enough bytes for UuidChunk uuids".to_string());
+                    }
+                }
+                uuids.push(uuid);
+            }
+
+            Ok(Box::new(UuidChunk {
+                type_name,
+                length,
+                uuids,
+            }))
+        }
+        fn to_be_bytes(&self) -> Result<Vec<u8>, ChunkError> {
             let mut bytes = Vec::new();
             bytes.extend(&self.type_name);
             bytes.extend(&self.length);
@@ -98,6 +205,23 @@ pub mod chunk {
                 bytes.extend(uuid);
             }
             Ok(bytes)
+        }
+
+        fn to_be_data(&self) -> Result<PartialCRDTData, ChunkError> {
+            let mut uuids = Vec::new();
+            for uuid in &self.uuids {
+                let mut uuid_str = String::new();
+                for b in uuid {
+                    uuid_str.push_str(&format!("{:02x}", b));
+                }
+                uuids.push(uuid_str);
+            }
+            Ok(PartialCRDTData {
+                uuids: Some(uuids),
+                palette: None,
+                width: None,
+                data: None,
+            })
         }
     }
 
@@ -107,7 +231,7 @@ pub mod chunk {
         palettes: Vec<[u8; 3]>,
     }
     impl Chunkable for PaletteChunk {
-        fn parse(data: &CRDTData) -> Result<Box<Self>, String> {
+        fn parse(data: &CRDTData) -> Result<Box<Self>, ChunkError> {
             let mut palettes: Vec<[u8; 3]> = Vec::new();
             palettes.push([0, 0, 0]);
             for palette in &data.palette {
@@ -126,7 +250,52 @@ pub mod chunk {
                 palettes,
             }))
         }
-        fn to_be_bytes(&self) -> Result<Vec<u8>, String> {
+        fn parse_bytes(bytes: &mut dyn Iterator<Item = &u8>) -> Result<Box<Self>, ChunkError>
+        where
+            Self: Sized,
+        {
+            let mut type_name = [0u8; 4];
+            for i in 0..4 {
+                if let Some(byte) = bytes.next() {
+                    type_name[i] = byte.clone();
+                } else {
+                    return Err("Not enough bytes for PaletteChunk type_name".to_string());
+                }
+            }
+
+            if type_name != str_to_ascii_bytes("PLTT") {
+                return Err("Type name is not PLTT".to_string());
+            }
+
+            let mut length = [0u8; 2];
+            for i in 0..2 {
+                if let Some(byte) = bytes.next() {
+                    length[i] = byte.clone();
+                } else {
+                    return Err("Not enough bytes for PaletteChunk length".to_string());
+                }
+            }
+
+            let mut palettes = Vec::new();
+            for _ in 0..u16::from_be_bytes(length) {
+                let mut palette = [0u8; 3];
+                for i in 0..3 {
+                    if let Some(byte) = bytes.next() {
+                        palette[i] = byte.clone();
+                    } else {
+                        return Err("Not enough bytes for PaletteChunk palettes".to_string());
+                    }
+                }
+                palettes.push(palette);
+            }
+
+            Ok(Box::new(PaletteChunk {
+                type_name,
+                length,
+                palettes,
+            }))
+        }
+        fn to_be_bytes(&self) -> Result<Vec<u8>, ChunkError> {
             let mut bytes = Vec::new();
             bytes.extend(&self.type_name);
             bytes.extend(&self.length);
@@ -134,6 +303,23 @@ pub mod chunk {
                 bytes.extend(palette);
             }
             Ok(bytes)
+        }
+        fn to_be_data(&self) -> Result<PartialCRDTData, ChunkError> {
+            let mut palettes = Vec::new();
+            for (i, palette) in self.palettes.iter().enumerate() {
+                if i > 0 {
+                    palettes.push(format!(
+                        "{:02x}{:02x}{:02x}",
+                        palette[0], palette[1], palette[2]
+                    ));
+                }
+            }
+            Ok(PartialCRDTData {
+                uuids: None,
+                palette: Some(palettes),
+                width: None,
+                data: None,
+            })
         }
     }
 
@@ -147,8 +333,9 @@ pub mod chunk {
         data: Vec<DataChunkItem>,
     }
     impl Chunkable for DataChunk {
-        fn parse(data: &CRDTData) -> Result<Box<Self>, String> {
+        fn parse(data: &CRDTData) -> Result<Box<Self>, ChunkError> {
             let mut data_chunk_items = Vec::new();
+            let mut length: u16 = 0;
             for data_item in &data.data {
                 match data_item {
                     DataItem::Pixel(uuid, timestamp, palette) => {
@@ -156,8 +343,13 @@ pub mod chunk {
                             1,
                             uuid.clone(),
                             timestamp.clone(),
-                            palette.unwrap_or(0).clone(),
+                            if let Some(index) = palette {
+                                index + 1
+                            } else {
+                                0
+                            },
                         ]));
+                        length += 4;
                     }
                     DataItem::Blank(n) => {
                         data_chunk_items.push(DataChunkItem::Blank([
@@ -165,17 +357,86 @@ pub mod chunk {
                             n.to_be_bytes()[0],
                             n.to_be_bytes()[1],
                         ]));
+                        length += 3;
                     }
                 }
             }
 
             Ok(Box::new(DataChunk {
                 type_name: str_to_ascii_bytes("DATA"),
-                length: len_to_bytes(data_chunk_items.len() as u16),
+                length: len_to_bytes(length),
                 data: data_chunk_items,
             }))
         }
-        fn to_be_bytes(&self) -> Result<Vec<u8>, String> {
+        fn parse_bytes(bytes: &mut dyn Iterator<Item = &u8>) -> Result<Box<Self>, ChunkError>
+        where
+            Self: Sized,
+        {
+            let mut type_name = [0u8; 4];
+            for i in 0..4 {
+                if let Some(byte) = bytes.next() {
+                    type_name[i] = byte.clone();
+                } else {
+                    return Err("Not enough bytes for DataChunk type_name".to_string());
+                }
+            }
+
+            if type_name != str_to_ascii_bytes("DATA") {
+                return Err("Type name is not DATA".to_string());
+            }
+
+            let mut length = [0u8; 2];
+            for i in 0..2 {
+                if let Some(byte) = bytes.next() {
+                    length[i] = byte.clone();
+                } else {
+                    return Err("Not enough bytes for DataChunk length".to_string());
+                }
+            }
+
+            let length_u16 = u16::from_be_bytes(length);
+            let mut data = Vec::with_capacity(length_u16 as usize);
+
+            while let Some(data_chunk_item_type) = bytes.next() {
+                let data_chunk_item_type = data_chunk_item_type.clone();
+                if data_chunk_item_type == 1 {
+                    let mut data_chunk_item = [0u8; 4];
+                    data_chunk_item[0] = data_chunk_item_type;
+                    for i in 1..4 {
+                        if let Some(byte) = bytes.next() {
+                            data_chunk_item[i] = byte.clone();
+                        } else {
+                            return Err(
+                                "Not enough bytes for DataChunk data_chunk_item_pixel".to_string()
+                            );
+                        }
+                    }
+                    println!("data_chunk_item {:?}", data_chunk_item);
+                    data.push(DataChunkItem::Pixel(data_chunk_item));
+                } else {
+                    let mut data_chunk_item = [0u8; 3];
+                    data_chunk_item[0] = data_chunk_item_type;
+                    for i in 1..3 {
+                        if let Some(byte) = bytes.next() {
+                            data_chunk_item[i] = byte.clone();
+                        } else {
+                            return Err(
+                                "Not enough bytes for DataChunk data_chunk_item_blank".to_string()
+                            );
+                        }
+                    }
+                    println!("data_chunk_item {:?}", data_chunk_item);
+                    data.push(DataChunkItem::Blank(data_chunk_item));
+                }
+            }
+
+            Ok(Box::new(DataChunk {
+                type_name,
+                length,
+                data,
+            }))
+        }
+        fn to_be_bytes(&self) -> Result<Vec<u8>, ChunkError> {
             let mut bytes = Vec::new();
             bytes.extend(&self.type_name);
             bytes.extend(&self.length);
@@ -186,6 +447,29 @@ pub mod chunk {
                 }
             }
             Ok(bytes)
+        }
+        fn to_be_data(&self) -> Result<PartialCRDTData, ChunkError> {
+            let mut data = Vec::new();
+            for data_chunk_item in &self.data {
+                match data_chunk_item {
+                    DataChunkItem::Pixel(bs) => {
+                        data.push(DataItem::Pixel(
+                            bs[1],
+                            bs[2],
+                            if bs[3] == 0 { None } else { Some(bs[3] - 1) },
+                        ));
+                    }
+                    DataChunkItem::Blank(bs) => {
+                        data.push(DataItem::Blank(u16::from_be_bytes([bs[1], bs[2]])));
+                    }
+                }
+            }
+            Ok(PartialCRDTData {
+                uuids: None,
+                palette: None,
+                width: None,
+                data: Some(data),
+            })
         }
     }
 
@@ -250,5 +534,28 @@ mod test {
         let data_in_bytes = chunk::to_bytes(&data).unwrap();
 
         assert_eq!(data_in_bytes.len(), 88);
+    }
+
+    #[test]
+    fn from_bytes_should_work() {
+        let data = CRDTData {
+            uuids: vec![
+                "0442197c814447f7ae64340a2df3d796".to_string(),
+                "4ae8bd76e84c4652bcd8a5e339c574f3".to_string(),
+            ],
+            palette: vec!["ffffff".to_string(), "6c4fff".to_string()],
+            width: 100,
+            data: vec![
+                DataItem::Pixel(0, 3, Some(0)),
+                DataItem::Pixel(0, 4, Some(0)),
+                DataItem::Pixel(0, 2, None),
+                DataItem::Blank(97),
+                DataItem::Pixel(1, 2, Some(1)),
+                DataItem::Pixel(1, 3, Some(1)),
+            ],
+        };
+        let data_in_bytes = chunk::to_bytes(&data).unwrap();
+        let data_from_bytes = chunk::from_bytes(&data_in_bytes).unwrap();
+        assert_eq!(data, data_from_bytes);
     }
 }

@@ -4,7 +4,8 @@ import App from "./app.vue";
 
 createApp(App).mount("#app");
 
-import { data_to_bytes } from "crdt-buffer";
+import { data_to_bytes, bytes_to_data } from "crdt-buffer";
+
 const result = data_to_bytes({
   uuids: [
     "0442197c814447f7ae64340a2df3d796",
@@ -48,3 +49,4 @@ const chunks = chunk(
 );
 
 console.log(chunks.map((chunk) => chunk.join(" ")).join("\n"));
+console.log(bytes_to_data(result));

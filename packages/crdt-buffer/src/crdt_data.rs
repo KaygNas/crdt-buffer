@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
+
+pub type PixelDataState = HashMap<String, (String, u8, Option<String>)>;
 
 pub type Uuid = u8;
 pub type Color = Option<u8>;
@@ -17,11 +21,115 @@ pub struct CRDTData {
     pub data: Vec<DataItem>,
 }
 
+impl CRDTData {
+    pub fn to_pixel_data_state(&self) -> PixelDataState {
+        let mut pixel_data_state = PixelDataState::new();
+        let mut index: u16 = 0;
+        for data in self.data.iter() {
+            let x = index % self.width;
+            let y = index / self.width;
+            match data {
+                DataItem::Pixel(uuid, timestamp, color) => {
+                    pixel_data_state.insert(
+                        format!("{},{}", x, y),
+                        (
+                            self.uuids[*uuid as usize].clone(),
+                            *timestamp,
+                            if let Some(color) = color {
+                                Some(self.palette[*color as usize].clone())
+                            } else {
+                                None
+                            },
+                        ),
+                    );
+                    index += 1;
+                }
+                DataItem::Blank(n) => {
+                    index += n;
+                }
+            }
+        }
+        pixel_data_state
+    }
+
+    pub fn from_pixel_data_state(pixel_data_state: &PixelDataState, width: u16) -> Self {
+        let mut uuids: Vec<String> = Vec::new();
+        let mut palette: Vec<String> = Vec::new();
+        let mut data: Vec<DataItem> = Vec::new();
+
+        let mut coords: Vec<(u16, u16)> = pixel_data_state
+            .keys()
+            .map(|key| {
+                let key = key.split(",").collect::<Vec<&str>>();
+                let x = key[0].parse::<u16>().unwrap();
+                let y = key[1].parse::<u16>().unwrap();
+                (x, y)
+            })
+            .collect();
+        coords.sort_by(|a, b| {
+            let (ax, ay) = a;
+            let (bx, by) = b;
+            if ay == by {
+                ax.cmp(&bx)
+            } else {
+                ay.cmp(&by)
+            }
+        });
+
+        let mut prev_pixel_index: u16 = 0;
+        for coord in coords {
+            let (x, y) = coord;
+            let (uuid, timestamp, color) = pixel_data_state.get(&format!("{},{}", x, y)).unwrap();
+            let pixel_index = y * width + x;
+            let mut uuid_index = uuids.iter().position(|u| u == uuid);
+            let mut color_index = palette.iter().position(|c| {
+                if let Some(color) = color {
+                    c == color
+                } else {
+                    false
+                }
+            });
+
+            if uuid_index == None {
+                uuids.push(uuid.clone());
+                uuid_index = Some(uuids.len() - 1);
+            }
+
+            if color_index == None && color != &None {
+                if let Some(color) = color {
+                    palette.push(color.clone());
+                    color_index = Some(palette.len() - 1);
+                }
+            }
+
+            if pixel_index - prev_pixel_index > 1 {
+                data.push(DataItem::Blank(pixel_index - prev_pixel_index - 1));
+            }
+
+            let uuid_index = uuid_index.unwrap() as u8;
+            let color_index = if let Some(index) = color_index {
+                Some(index as u8)
+            } else {
+                None
+            };
+            data.push(DataItem::Pixel(uuid_index, timestamp.clone(), color_index));
+
+            prev_pixel_index = pixel_index;
+        }
+
+        CRDTData {
+            uuids,
+            palette,
+            width,
+            data,
+        }
+    }
+}
+
 pub mod chunk {
 
     use super::*;
     use hex;
-    use wasm_bindgen::UnwrapThrowExt;
 
     pub fn to_bytes(data: &CRDTData) -> Result<Vec<u8>, ChunkError> {
         let chunks: Vec<Box<dyn Chunkable>> = vec![

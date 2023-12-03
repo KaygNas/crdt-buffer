@@ -1,6 +1,5 @@
-import { fromCRDTData, toCRDTData } from "./adaptor";
 import { PixelData } from "./pixel-data";
-import { data_to_bytes, bytes_to_data } from "crdt-buffer";
+import { state_to_bytes, bytes_to_state } from "crdt-buffer";
 
 type Listener = (state: PixelData["state"]) => void;
 type ByteListener = (bytes: Uint8Array) => void;
@@ -8,8 +7,8 @@ class CentralServer {
   #connections: Map<string, ByteListener> = new Map();
   connect(id: string, listener: Listener) {
     const byteListenr = (bytes: Uint8Array) => {
-      const crdtData = bytes_to_data(bytes);
-      const state = fromCRDTData(crdtData);
+      const stateMap = bytes_to_state(bytes);
+      const state = Object.fromEntries(stateMap.entries());
       listener(state);
     };
     this.#connections.set(id, byteListenr);
@@ -43,8 +42,7 @@ export class ClientConnect {
 
   async send(state: PixelData["state"]) {
     await this.#sleep(this.#latency);
-    const crdtData = toCRDTData(state, 100 /* TODO: fix hardcode */);
-    const bytes = data_to_bytes(crdtData);
+    const bytes = state_to_bytes(state, 100 /* TODO: fix hardcode */);
     centralServer.broadcast(this.#id, bytes);
   }
 }

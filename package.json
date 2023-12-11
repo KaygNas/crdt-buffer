@@ -1,21 +1,21 @@
 {
   "name": "crdt_buffer",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
+  "type": "module",
   "description": "Monorepo for crdt_buffer",
   "author": "Huang Chengjie<597857074@qq.com>",
   "license": "MIT",
-  "engines": {
-    "node": ">=18.12.0"
-  },
   "scripts": {
+    "dev:game": "pnpm --filter draw-and-guess run dev",
     "build:crdt-buffer": "wasm-pack build --dev packages/crdt-buffer --target bundler --out-dir pkg",
-    "lint": "eslint --cache --ext .ts packages/*/src/**.ts --fix"
+    "lint": "eslint --cache --ext .ts,.vue --fix ./"
   },
   "devDependencies": {
     "@vue/eslint-config-prettier": "^8.0.0",
     "@vue/eslint-config-typescript": "^12.0.0",
-    "eslint": "^8.54.0",
-    "eslint-plugin-vue": "^9.18.1"
+    "eslint": "^8.55.0",
+    "eslint-plugin-simple-import-sort": "^10.0.0",
+    "eslint-plugin-vue": "^9.19.2"
   }
 }

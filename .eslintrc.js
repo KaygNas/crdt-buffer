@@ -20,6 +20,8 @@ module.exports = {
     'vue/require-default-prop': 'off',
     'simple-import-sort/imports': 'error',
     'simple-import-sort/exports': 'error',
-    'vue/multi-word-component-names': 'off'
+    'vue/multi-word-component-names': 'off',
+    'accessor-pairs': 'off',
+    'brace-style': ['error', 'stroustrup']
   }
 }

@@ -3,7 +3,7 @@ import wasm from 'vite-plugin-wasm'
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
-  modules: [],
+  modules: ['nuxt-socket-io'],
   vite: {
     plugins: [wasm()]
   }

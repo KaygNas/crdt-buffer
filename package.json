@@ -2,7 +2,6 @@
   "name": "crdt_buffer",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
   "description": "Monorepo for crdt_buffer",
   "author": "Huang Chengjie<597857074@qq.com>",
   "license": "MIT",

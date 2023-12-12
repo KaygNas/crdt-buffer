@@ -25,7 +25,9 @@ export class LWWMap<T> {
 
     // build up an object where each value is set to the value of the register at the corresponding key
     for (const [key, register] of this.#data.entries()) {
-      if (register.value !== null) { value[key] = register.value }
+      if (register.value !== null) {
+        value[key] = register.value
+      }
     }
 
     return value
@@ -36,7 +38,9 @@ export class LWWMap<T> {
 
     // build up an object where each value is set to the full state of the register at the corresponding key
     for (const [key, register] of this.#data.entries()) {
-      if (register) { state[key] = register.state }
+      if (register) {
+        state[key] = register.state
+      }
     }
 
     return state
@@ -55,9 +59,13 @@ export class LWWMap<T> {
     const register = this.#data.get(key)
 
     // if the register already exists, set the value
-    if (register) { register.set(value) }
+    if (register) {
+      register.set(value)
+    }
     // otherwise, instantiate a new `LWWRegister` with the value
-    else { this.#data.set(key, new LWWRegister(this.id, [this.id, 1, value])) }
+    else {
+      this.#data.set(key, new LWWRegister(this.id, [this.id, 1, value]))
+    }
   }
 
   delete (key: string) {
@@ -71,9 +79,13 @@ export class LWWMap<T> {
       const local = this.#data.get(key)
 
       // if the register already exists, merge it with the incoming state
-      if (local) { local.merge(remote) }
+      if (local) {
+        local.merge(remote)
+      }
       // otherwise, instantiate a new `LWWRegister` with the incoming state
-      else { this.#data.set(key, new LWWRegister(this.id, remote)) }
+      else {
+        this.#data.set(key, new LWWRegister(this.id, remote))
+      }
     }
   }
 }

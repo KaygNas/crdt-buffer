@@ -1,3 +1,4 @@
+// eslint-disable-next-line camelcase
 import { bytes_to_state, state_to_bytes } from 'crdt-buffer'
 
 import type { PixelData } from './pixel-data'
@@ -17,7 +18,9 @@ class CentralServer {
 
   broadcast (fromId: string, bytes: Uint8Array) {
     for (const [id, listener] of this.#connections.entries()) {
-      if (id === fromId) { continue }
+      if (id === fromId) {
+        continue
+      }
       listener(bytes)
     }
   }
@@ -47,20 +50,4 @@ export class ClientConnect {
     const bytes = state_to_bytes(state, 100 /* TODO: fix hardcode */)
     centralServer.broadcast(this.#id, bytes)
   }
-}
-
-const chunk = <T>(arr: T[], size: number) => {
-  const result = []
-  for (let i = 0; i < arr.length; i += size) {
-    result.push(arr.slice(i, size + i))
-  }
-  return result
-}
-
-function bytestoHex (bytes: Uint8Array, perline: number) {
-  const chunks = chunk(
-    Array.from(bytes).map(n => n.toString(16).padStart(2, '0')),
-    perline
-  )
-  return chunks.map(chunk => chunk.join(' ')).join('\n')
 }

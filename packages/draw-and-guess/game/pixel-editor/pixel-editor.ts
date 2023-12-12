@@ -32,7 +32,9 @@ export class PixelEditor {
 
     // get the 2D rendering context
     const ctx = el.getContext('2d')
-    if (!ctx) { throw new Error("Couldn't get rendering context") }
+    if (!ctx) {
+      throw new Error("Couldn't get rendering context")
+    }
     this.#ctx = ctx
 
     // store the artboard size
@@ -75,7 +77,9 @@ export class PixelEditor {
       }
 
       case 'pointermove': {
-        if (!this.#el.hasPointerCapture(e.pointerId)) { return }
+        if (!this.#el.hasPointerCapture(e.pointerId)) {
+          return
+        }
 
         // convert canvas pixels to artboard pixels
         const x = Math.floor(
@@ -105,10 +109,16 @@ export class PixelEditor {
    * @param y Y coordinate of the destination pixel.
    */
   #paint (x: number, y: number) {
-    if (x < 0 || this.#artboard.w <= x) { return }
-    if (y < 0 || this.#artboard.h <= y) { return }
+    if (x < 0 || this.#artboard.w <= x) {
+      return
+    }
+    if (y < 0 || this.#artboard.h <= y) {
+      return
+    }
 
-    if (!this.#checkPainted(x, y)) { this.#data.set(x, y, this.#color) }
+    if (!this.#checkPainted(x, y)) {
+      this.#data.set(x, y, this.#color)
+    }
 
     let [x0, y0] = this.#prev || [x, y]
 
@@ -125,7 +135,9 @@ export class PixelEditor {
       const x1 = Math.round(x0)
       const y1 = Math.round(y0)
 
-      if (!this.#checkPainted(x1, y1)) { this.#data.set(x1, y1, this.#color) }
+      if (!this.#checkPainted(x1, y1)) {
+        this.#data.set(x1, y1, this.#color)
+      }
     }
 
     this.#draw()

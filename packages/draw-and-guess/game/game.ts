@@ -1,4 +1,4 @@
-import type { Platform, Size } from './interface'
+import type { Platform } from './interface'
 import { ClientConnect, PixelEditor } from './pixel-editor'
 
 export class Game {

@@ -22,9 +22,13 @@ export class LWWRegister<T> implements CRDT<T, State<T>> {
     const [remotePeer, remoteTimestamp] = state
     const [localPeer, localTimestamp] = this.state
 
-    if (localTimestamp > remoteTimestamp) { return }
+    if (localTimestamp > remoteTimestamp) {
+      return
+    }
 
-    if (localTimestamp === remoteTimestamp && localPeer > remotePeer) { return }
+    if (localTimestamp === remoteTimestamp && localPeer > remotePeer) {
+      return
+    }
 
     this.state = state
   }

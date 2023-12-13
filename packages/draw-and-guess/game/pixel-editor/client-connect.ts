@@ -1,10 +1,9 @@
-// eslint-disable-next-line camelcase
+/* eslint-disable camelcase */
 import { bytes_to_state, state_to_bytes } from 'crdt-buffer'
 import type { Socket } from 'socket.io-client'
 
 import type { PixelData } from './pixel-data'
 import { debuglog } from '~/utils/debug'
-
 
 type Listener = (state: PixelData['state']) => void;
 interface User {

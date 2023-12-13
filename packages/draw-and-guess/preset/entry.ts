@@ -4,7 +4,7 @@ import { Server as HttpServer } from 'node:http'
 import { Server as HttpsServer } from 'node:https'
 import type { AddressInfo } from 'node:net'
 
-import destr from 'destr'
+import { destr } from 'destr'
 import { toNodeListener } from 'h3'
 import { Server as SocketServer } from 'socket.io'
 
@@ -31,6 +31,7 @@ const path = process.env.NITRO_UNIX_SOCKET
 // @ts-ignore
 const listener = server.listen(path ? { path } : { port, host }, (err) => {
   if (err) {
+    // eslint-disable-next-line no-console
     console.error(err)
 
     process.exit(1)

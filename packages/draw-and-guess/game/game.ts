@@ -26,10 +26,14 @@ export class Game {
     const { canvas, platform } = this
     const size = platform.getSize()
     const uuid = platform.getUuid()
-    const latency = platform.getLatency()
     const artboardSize = { w: size.width, h: size.height }
     const editor = new PixelEditor(canvas, artboardSize)
-    const connect = new ClientConnect(uuid, latency)
+    const connect = new ClientConnect({
+      userId: uuid,
+      userName: 'test', // TODO: get user name
+      roomId: '1', // TODO: get room
+      io: platform.getIo()
+    })
     connect.onmessage = state => editor.receive(state)
     editor.onchange = state => connect.send(state)
   }

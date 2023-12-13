@@ -10,7 +10,11 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "crdt-buffer": "workspace:^"
+    "@vueuse/core": "^10.7.0",
+    "crdt-buffer": "workspace:^",
+    "eventemitter3": "^5.0.1",
+    "socket.io": "^4.7.2",
+    "socket.io-client": "^4.7.2"
   },
   "devDependencies": {
     "@nuxt/devtools": "latest",

@@ -1,7 +1,11 @@
 <script lang='ts' setup>
-import { Game } from '~/game'
+import type { Socket } from 'socket.io-client'
 
+import { Game } from '~/game'
+import { debuglog } from '~/utils/debug'
 definePageMeta({ layout: 'default' })
+
+const { $io } : { $io: Socket} = useNuxtApp()
 
 const canvasRef = ref<HTMLCanvasElement>()
 onMounted(() => {
@@ -15,9 +19,21 @@ onMounted(() => {
       height: parentHeight
     }),
     getLatency: () => 2000,
-    getUuid: () => String(Math.random())
+    getUuid: () => String(Math.random()),
+    getIo: () => $io
   })
   game.start()
+  if ($io) {
+    $io.on('paint', (msg) => {
+      debuglog('paint', msg)
+    })
+    $io.on('join', (msg) => {
+      debuglog('join', msg)
+    })
+    $io.on('leave', (msg) => {
+      debuglog('leave', msg)
+    })
+  }
 })
 </script>
 

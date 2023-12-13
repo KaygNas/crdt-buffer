@@ -1,6 +1,7 @@
 #![feature(slice_flatten)]
 #![feature(associated_type_defaults)]
 
+use console_error_panic_hook;
 use wasm_bindgen::prelude::*;
 mod crdt_data;
 
@@ -12,6 +13,7 @@ extern "C" {
 
 #[wasm_bindgen]
 pub fn state_to_bytes(value: JsValue, width: JsValue) -> Vec<u8> {
+    console_error_panic_hook::set_once();
     let result = serde_wasm_bindgen::from_value::<crdt_data::PixelDataState>(value);
     let width = serde_wasm_bindgen::from_value::<u16>(width);
 
@@ -42,6 +44,7 @@ pub fn state_to_bytes(value: JsValue, width: JsValue) -> Vec<u8> {
 
 #[wasm_bindgen]
 pub fn bytes_to_state(value: JsValue) -> JsValue {
+    console_error_panic_hook::set_once();
     let bytes = match serde_wasm_bindgen::from_value::<Vec<u8>>(value) {
         Ok(bytes) => bytes,
         Err(err) => {

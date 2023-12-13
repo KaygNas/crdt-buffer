@@ -11,7 +11,7 @@ pub type Width = u16;
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub enum DataItem {
     Pixel(Uuid, Timestamp, Color),
-    Blank(u16),
+    Blank(u32),
 }
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct CRDTData {
@@ -24,10 +24,10 @@ pub struct CRDTData {
 impl CRDTData {
     pub fn to_pixel_data_state(&self) -> PixelDataState {
         let mut pixel_data_state = PixelDataState::new();
-        let mut index: u16 = 0;
+        let mut index: u32 = 0;
         for data in self.data.iter() {
-            let x = index % self.width;
-            let y = index / self.width;
+            let x = index % (self.width as u32);
+            let y = index / (self.width as u32);
             match data {
                 DataItem::Pixel(uuid, timestamp, color) => {
                     pixel_data_state.insert(
@@ -76,11 +76,11 @@ impl CRDTData {
             }
         });
 
-        let mut prev_pixel_index: u16 = 0;
+        let mut prev_pixel_index: u32 = 0;
         for coord in coords {
             let (x, y) = coord;
             let (uuid, timestamp, color) = pixel_data_state.get(&format!("{},{}", x, y)).unwrap();
-            let pixel_index = y * width + x;
+            let pixel_index = (y as u32) * (width as u32) + (x as u32);
             let mut uuid_index = uuids.iter().position(|u| u == uuid);
             let mut color_index = palette.iter().position(|c| {
                 if let Some(color) = color {
@@ -431,9 +431,11 @@ pub mod chunk {
         }
     }
 
+    pub const DATA_CHUNK_ITEM_PIXEL_LEN: usize = 4;
+    pub const DATA_CHUNK_ITEM_BLANK_LEN: usize = 5;
     enum DataChunkItem {
-        Pixel([u8; 4]),
-        Blank([u8; 3]),
+        Pixel([u8; DATA_CHUNK_ITEM_PIXEL_LEN]),
+        Blank([u8; DATA_CHUNK_ITEM_BLANK_LEN]),
     }
     pub struct DataChunk {
         type_name: [u8; 4],
@@ -447,7 +449,7 @@ pub mod chunk {
             for data_item in &data.data {
                 match data_item {
                     DataItem::Pixel(uuid, timestamp, palette) => {
-                        data_chunk_items.push(DataChunkItem::Pixel([
+                        let pixel = [
                             1,
                             uuid.clone(),
                             timestamp.clone(),
@@ -456,16 +458,15 @@ pub mod chunk {
                             } else {
                                 0
                             },
-                        ]));
-                        length += 4;
+                        ];
+                        data_chunk_items.push(DataChunkItem::Pixel(pixel));
+                        length += pixel.len() as u16;
                     }
                     DataItem::Blank(n) => {
-                        data_chunk_items.push(DataChunkItem::Blank([
-                            0,
-                            n.to_be_bytes()[0],
-                            n.to_be_bytes()[1],
-                        ]));
-                        length += 3;
+                        let bytes = n.to_be_bytes();
+                        let blank = [0, bytes[0], bytes[1], bytes[2], bytes[3]];
+                        data_chunk_items.push(DataChunkItem::Blank(blank));
+                        length += blank.len() as u16;
                     }
                 }
             }
@@ -510,7 +511,7 @@ pub mod chunk {
                 if data_chunk_item_type == 1 {
                     let mut data_chunk_item = [0u8; 4];
                     data_chunk_item[0] = data_chunk_item_type;
-                    for i in 1..4 {
+                    for i in 1..DATA_CHUNK_ITEM_PIXEL_LEN {
                         if let Some(byte) = bytes.next() {
                             data_chunk_item[i] = byte.clone();
                         } else {
@@ -522,9 +523,9 @@ pub mod chunk {
                     println!("data_chunk_item {:?}", data_chunk_item);
                     data.push(DataChunkItem::Pixel(data_chunk_item));
                 } else {
-                    let mut data_chunk_item = [0u8; 3];
+                    let mut data_chunk_item = [0u8; 5];
                     data_chunk_item[0] = data_chunk_item_type;
-                    for i in 1..3 {
+                    for i in 1..DATA_CHUNK_ITEM_BLANK_LEN {
                         if let Some(byte) = bytes.next() {
                             data_chunk_item[i] = byte.clone();
                         } else {
@@ -568,7 +569,9 @@ pub mod chunk {
                         ));
                     }
                     DataChunkItem::Blank(bs) => {
-                        data.push(DataItem::Blank(u16::from_be_bytes([bs[1], bs[2]])));
+                        data.push(DataItem::Blank(u32::from_be_bytes([
+                            bs[1], bs[2], bs[3], bs[4],
+                        ])));
                     }
                 }
             }

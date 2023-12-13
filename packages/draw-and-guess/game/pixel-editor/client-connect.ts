@@ -32,7 +32,6 @@ export class ClientConnect {
       }
 
       const bytes = new Uint8Array(blob)
-      debuglog('bytes received from', from, bytes)
       const stateMap = bytes_to_state(bytes)
       const state = Object.fromEntries(stateMap.entries())
       listener(state)
@@ -48,13 +47,9 @@ export class ClientConnect {
     this.#io.on('leave', (user: User, message: any) => {
       debuglog('[leave]', user, message)
     })
-    this.#io.on('paint', (user: User, message: any) => {
-      debuglog('[paint]', user, message)
-    })
   }
 
   send (state: PixelData['state']) {
-    debuglog('[send] state: ', state)
     const bytes = state_to_bytes(state, this.#size.width)
     this.#io.emit('paint', this.#room.id, this.user, bytes)
   }

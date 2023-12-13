@@ -26,10 +26,10 @@ impl CRDTData {
         let mut pixel_data_state = PixelDataState::new();
         let mut index: u32 = 0;
         for data in self.data.iter() {
-            let x = index % (self.width as u32);
-            let y = index / (self.width as u32);
             match data {
                 DataItem::Pixel(uuid, timestamp, color) => {
+                    let x = index % (self.width as u32);
+                    let y = index / (self.width as u32);
                     pixel_data_state.insert(
                         format!("{},{}", x, y),
                         (
@@ -76,11 +76,11 @@ impl CRDTData {
             }
         });
 
-        let mut prev_pixel_index: u32 = 0;
+        let mut prev_pixel_index: i64 = -1;
         for coord in coords {
             let (x, y) = coord;
             let (uuid, timestamp, color) = pixel_data_state.get(&format!("{},{}", x, y)).unwrap();
-            let pixel_index = (y as u32) * (width as u32) + (x as u32);
+            let pixel_index = ((y as u32) * (width as u32) + (x as u32)) as i64;
             let mut uuid_index = uuids.iter().position(|u| u == uuid);
             let mut color_index = palette.iter().position(|c| {
                 if let Some(color) = color {
@@ -103,7 +103,7 @@ impl CRDTData {
             }
 
             if pixel_index - prev_pixel_index > 1 {
-                data.push(DataItem::Blank(pixel_index - prev_pixel_index - 1));
+                data.push(DataItem::Blank((pixel_index - prev_pixel_index - 1) as u32));
             }
 
             let uuid_index = uuid_index.unwrap() as u8;
@@ -624,8 +624,8 @@ mod test {
         let bytes = hex::decode(hex).unwrap();
         assert_eq!(bytes.len(), 3);
     }
-    #[test]
-    fn to_bytes_should_work() {
+
+    fn create_crdt_test_data() -> CRDTData {
         let data = CRDTData {
             uuids: vec![
                 "0442197c814447f7ae64340a2df3d796".to_string(),
@@ -642,31 +642,49 @@ mod test {
                 DataItem::Pixel(1, 3, Some(1)),
             ],
         };
+
+        data
+    }
+
+    #[test]
+    fn to_bytes_should_work() {
+        let data = create_crdt_test_data();
         let data_in_bytes = chunk::to_bytes(&data).unwrap();
 
-        assert_eq!(data_in_bytes.len(), 88);
+        assert_eq!(data_in_bytes.len(), 90);
     }
 
     #[test]
     fn from_bytes_should_work() {
-        let data = CRDTData {
-            uuids: vec![
-                "0442197c814447f7ae64340a2df3d796".to_string(),
-                "4ae8bd76e84c4652bcd8a5e339c574f3".to_string(),
-            ],
-            palette: vec!["ffffff".to_string(), "6c4fff".to_string()],
-            width: 100,
-            data: vec![
-                DataItem::Pixel(0, 3, Some(0)),
-                DataItem::Pixel(0, 4, Some(0)),
-                DataItem::Pixel(0, 2, None),
-                DataItem::Blank(97),
-                DataItem::Pixel(1, 2, Some(1)),
-                DataItem::Pixel(1, 3, Some(1)),
-            ],
-        };
+        let data = create_crdt_test_data();
         let data_in_bytes = chunk::to_bytes(&data).unwrap();
         let data_from_bytes = chunk::from_bytes(&data_in_bytes).unwrap();
         assert_eq!(data, data_from_bytes);
+    }
+
+    #[test]
+    fn to_pixel_data_state_should_work() {
+        let data = CRDTData {
+            uuids: vec!["0442197c814447f7ae64340a2df3d796".to_string()],
+            palette: vec!["ffffff".to_string()],
+            width: 375,
+            data: vec![
+                DataItem::Blank(31 * 375 + 36),
+                DataItem::Pixel(0, 3, Some(0)),
+            ],
+        };
+
+        let pixel_data_state = data.to_pixel_data_state();
+        let data_from_pixel_data = CRDTData::from_pixel_data_state(&pixel_data_state, data.width);
+
+        assert_eq!(data, data_from_pixel_data);
+
+        let data_in_bytes = chunk::to_bytes(&data_from_pixel_data).unwrap();
+        let data_from_bytes = chunk::from_bytes(&data_in_bytes).unwrap();
+
+        assert_eq!(data, data_from_bytes);
+
+        let piexl_data_from_bytes = data_from_bytes.to_pixel_data_state();
+        assert_eq!(pixel_data_state, piexl_data_from_bytes);
     }
 }

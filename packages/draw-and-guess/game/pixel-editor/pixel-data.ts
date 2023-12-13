@@ -7,7 +7,7 @@ export class PixelData {
 
   constructor (id: string) {
     this.id = id
-    this.#data = new LWWMap(this.id, {})
+    this.#data = new LWWMap(this.id, new Map())
   }
 
   /**

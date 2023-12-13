@@ -3,9 +3,7 @@ import { LWWRegister } from './lwwregister'
 export type Value<T> = {
   [key: string]: T;
 };
-export type State<T> = {
-  [key: string]: LWWRegister<T | null>['state'];
-};
+export type State<T> = Map<string, LWWRegister<T | null>['state']>;
 
 export class LWWMap<T> {
   readonly id: string
@@ -34,12 +32,12 @@ export class LWWMap<T> {
   }
 
   get state () {
-    const state: State<T> = {}
+    const state: State<T> = new Map()
 
     // build up an object where each value is set to the full state of the register at the corresponding key
     for (const [key, register] of this.#data.entries()) {
       if (register) {
-        state[key] = register.state
+        state.set(key, register.state)
       }
     }
 
@@ -75,7 +73,7 @@ export class LWWMap<T> {
 
   merge (state: State<T>) {
     // recursively merge each key's register with the incoming state for that key
-    for (const [key, remote] of Object.entries(state)) {
+    for (const [key, remote] of state.entries()) {
       const local = this.#data.get(key)
 
       // if the register already exists, merge it with the incoming state

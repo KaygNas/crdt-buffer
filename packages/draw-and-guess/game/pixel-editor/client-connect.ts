@@ -32,8 +32,8 @@ export class ClientConnect {
       }
 
       const bytes = new Uint8Array(blob)
-      const stateMap = bytes_to_state(bytes)
-      const state = Object.fromEntries(stateMap.entries())
+      const state = bytes_to_state(bytes)
+      debuglog('[paint]', from, state)
       listener(state)
     }
     this.#io.on('paint', byteListenr)

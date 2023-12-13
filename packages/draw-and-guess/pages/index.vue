@@ -1,8 +1,10 @@
 <script lang='ts' setup>
 import type { Socket } from 'socket.io-client'
 
+import type { Platform } from '~/game'
 import { Game } from '~/game'
-import { debuglog } from '~/utils/debug'
+import { generateRandom } from '~/utils'
+
 definePageMeta({ layout: 'default' })
 
 const { $io } : { $io: Socket} = useNuxtApp()
@@ -12,28 +14,24 @@ onMounted(() => {
   const canvasElement = canvasRef.value!
   const parentHeight = canvasElement.parentElement!.clientHeight
   const parentWidth = canvasElement.parentElement!.clientWidth
-  const game = new Game({
+  const platform: Platform = {
     createCanvasElement: () => canvasElement,
     getSize: () => ({
       width: Math.min(375, parentWidth),
       height: parentHeight
     }),
-    getLatency: () => 2000,
-    getUuid: () => String(Math.random()),
-    getIo: () => $io
-  })
-  game.start()
-  if ($io) {
-    $io.on('paint', (msg) => {
-      debuglog('paint', msg)
-    })
-    $io.on('join', (msg) => {
-      debuglog('join', msg)
-    })
-    $io.on('leave', (msg) => {
-      debuglog('leave', msg)
+    getIo: () => $io,
+    getUser: () => ({
+      id: crypto.randomUUID().replaceAll('-', ''),
+      name: generateRandom(4)
+    }),
+    getRoom: () => ({
+      id: '1', // TODO
+      name: 'test'
     })
   }
+  const game = new Game(platform)
+  game.start()
 })
 </script>
 

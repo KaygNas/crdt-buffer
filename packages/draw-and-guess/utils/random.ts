@@ -1,4 +1,5 @@
 const letterBytes = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%&*()_+='
+
 export function generateRandom (length: number) : string {
   let result = ''
   const charactersLength = letterBytes.length

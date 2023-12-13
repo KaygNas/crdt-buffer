@@ -1,38 +1,36 @@
 /* eslint-disable camelcase */
 import { bytes_to_state, state_to_bytes } from 'crdt-buffer'
-import type { Socket } from 'socket.io-client'
 
+import type { Size } from '../interface'
 import type { PixelData } from './pixel-data'
+import type { Room, User, Socket } from '~/interfaces'
 import { debuglog } from '~/utils/debug'
 
 type Listener = (state: PixelData['state']) => void;
-interface User {
-  id: string;
-  name: string;
-}
 
 export class ClientConnect {
-  #roomId: string
-  #userId: string
-  #userName: string
+  #user: User
+  #room: Room
+  #size: Size
   #io: Socket
-  constructor (config: {userId: string, userName: string; roomId: string, io: Socket}) {
-    this.#roomId = config.roomId
-    this.#userId = config.userId
-    this.#userName = config.userName
+  constructor (config: { user: User, room: Room, io: Socket, size: Size}) {
+    this.#size = config.size
+    this.#user = config.user
+    this.#room = config.room
     this.#io = config.io
     this.#initialize()
   }
 
   get user (): User {
-    return {
-      id: this.#userId,
-      name: this.#userName
-    }
+    return this.#user
   }
 
   set onmessage (listener: Listener) {
     const byteListenr = (from: User, blob: ArrayBuffer) => {
+      if (from.id === this.user.id) {
+        return
+      }
+
       const bytes = new Uint8Array(blob)
       debuglog('bytes received from', from, bytes)
       const stateMap = bytes_to_state(bytes)
@@ -43,11 +41,21 @@ export class ClientConnect {
   }
 
   #initialize () {
-    this.#io.emit('joinRoom', this.#roomId, this.user)
+    this.#io.emit('joinRoom', this.#room.id, this.user)
+    this.#io.on('join', (user: User, message: any) => {
+      debuglog('[join]', user, message)
+    })
+    this.#io.on('leave', (user: User, message: any) => {
+      debuglog('[leave]', user, message)
+    })
+    this.#io.on('paint', (user: User, message: any) => {
+      debuglog('[paint]', user, message)
+    })
   }
 
   send (state: PixelData['state']) {
-    const bytes = state_to_bytes(state, 100 /* TODO: fix hardcode */)
-    this.#io.emit('paint', this.#roomId, this.user, bytes)
+    debuglog('[send] state: ', state)
+    const bytes = state_to_bytes(state, this.#size.width)
+    this.#io.emit('paint', this.#room.id, this.user, bytes)
   }
 }

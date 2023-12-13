@@ -26,9 +26,9 @@ export class PixelEditor {
   /** The set of pixel keys that have been painted during the current drag operation */
   #painted = new Set<string>()
 
-  constructor (el: HTMLCanvasElement, artboard: { w: number; h: number }) {
+  constructor (id: string, el: HTMLCanvasElement, artboard: { w: number; h: number }) {
     this.#el = el
-    this.#data = new PixelData(el.id)
+    this.#data = new PixelData(id)
 
     // get the 2D rendering context
     const ctx = el.getContext('2d')

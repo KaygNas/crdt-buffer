@@ -1,4 +1,4 @@
-import type { Socket } from 'socket.io-client'
+import type { Socket, User, Room } from '~/interfaces'
 
 export interface Size {
   width: number;
@@ -8,7 +8,7 @@ export interface Size {
 export interface Platform {
   createCanvasElement: () => HTMLCanvasElement;
   getSize: () => Size;
-  getUuid: () => string;
-  getLatency: () => number;
+  getUser: () => User;
+  getRoom: () => Room;
   getIo: () => Socket;
 }

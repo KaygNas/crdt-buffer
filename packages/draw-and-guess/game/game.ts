@@ -5,6 +5,8 @@ export class Game {
   public canvas: HTMLCanvasElement
   public ctx: CanvasRenderingContext2D
   public platform: Platform
+  private editor!: PixelEditor
+  private connect!: ClientConnect
   constructor (platform: Platform) {
     const canvas = platform.createCanvasElement()
     const ctx = canvas.getContext('2d')
@@ -20,22 +22,22 @@ export class Game {
   initialize () {
     this.initEditor()
     this.resizeCanvas()
+    debuglog('Game initialized', this)
   }
 
   initEditor () {
     const { canvas, platform } = this
     const size = platform.getSize()
-    const uuid = platform.getUuid()
+    const user = platform.getUser()
+    const room = platform.getRoom()
+    const io = platform.getIo()
     const artboardSize = { w: size.width, h: size.height }
-    const editor = new PixelEditor(canvas, artboardSize)
-    const connect = new ClientConnect({
-      userId: uuid,
-      userName: 'test', // TODO: get user name
-      roomId: '1', // TODO: get room
-      io: platform.getIo()
-    })
+    const editor = new PixelEditor(user.id, canvas, artboardSize)
+    const connect = new ClientConnect({ user, room, io, size })
     connect.onmessage = state => editor.receive(state)
     editor.onchange = state => connect.send(state)
+    this.editor = editor
+    this.connect = connect
   }
 
   resizeCanvas () {

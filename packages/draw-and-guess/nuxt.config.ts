@@ -3,6 +3,7 @@ import wasm from 'vite-plugin-wasm'
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
+  ssr: false,
   runtimeConfig: {
     TURSO: {
       URL: process.env.TURSO_URL || 'MOCK_URL',

@@ -12,7 +12,10 @@ export default defineNuxtConfig({
   plugins: ['~/plugins/socket.client'],
   nitro: {
     entry: process.env.NODE_ENV === 'production' ? undefined : '../preset/entry.dev',
-    preset: './preset'
+    preset: './preset',
+    esbuild: {
+      options: { target: 'es2022' }
+    }
   },
   vite: {
     build: {

@@ -8,6 +8,7 @@
   "scripts": {
     "dev:game": "pnpm --filter draw-and-guess run dev",
     "build:game": "pnpm --filter draw-and-guess run build",
+    "preview:game": "pnpm --filter draw-and-guess run preview",
     "build:crdt-buffer": "wasm-pack build packages/crdt-buffer --target bundler --out-dir pkg",
     "lint": "eslint --cache --ext .ts,.vue --fix ./"
   },

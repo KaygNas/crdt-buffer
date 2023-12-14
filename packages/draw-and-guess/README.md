@@ -1,4 +1,6 @@
-# Nuxt 3 Minimal Starter
+# Draw and Guess Game
+
+A draw and guess game webapp, built on crdt-buffer and nuxt.
 
 Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
 

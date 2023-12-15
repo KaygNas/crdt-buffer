@@ -14,11 +14,14 @@
     "crdt-buffer": "workspace:^",
     "eventemitter3": "^5.0.1",
     "socket.io": "^4.7.2",
-    "socket.io-client": "^4.7.2"
+    "socket.io-client": "^4.7.2",
+    "weapp.socket.io": "^2.2.1"
   },
   "devDependencies": {
     "@nuxt/devtools": "latest",
+    "minigame-api-typings": "^3.8.4",
     "nuxt": "^3.8.2",
+    "vite-plugin-static-copy": "^1.0.0",
     "vite-plugin-wasm": "^3.2.2",
     "vue": "^3.3.10",
     "vue-router": "^4.2.5"

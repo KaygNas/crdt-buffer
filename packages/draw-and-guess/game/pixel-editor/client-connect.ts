@@ -1,5 +1,5 @@
-/* eslint-disable camelcase */
-import { bytes_to_state, state_to_bytes } from 'crdt-buffer'
+// TODO: performance improvement
+// import { bytes_to_state, state_to_bytes } from 'crdt-buffer'
 
 import type { Size } from '../interface'
 import type { PixelData } from './pixel-data'
@@ -26,15 +26,13 @@ export class ClientConnect {
   }
 
   set onmessage (listener: Listener) {
-    const byteListenr = (from: User, blob: ArrayBuffer) => {
+    const byteListenr = (from: User, state: [string, any][]) => {
       if (from.id === this.user.id) {
         return
       }
 
-      const bytes = new Uint8Array(blob)
-      const state = bytes_to_state(bytes)
       debuglog('[onmessage]', from, state)
-      listener(state)
+      listener(new Map(state))
     }
     this.#io.on('paint', byteListenr)
   }
@@ -51,7 +49,6 @@ export class ClientConnect {
 
   send (state: PixelData['state']) {
     debuglog('[send]', state)
-    const bytes = state_to_bytes(state, this.#size.width)
-    this.#io.emit('paint', this.#room.id, this.user, bytes)
+    this.#io.emit('paint', this.#room.id, this.user, Array.from(state.entries()))
   }
 }

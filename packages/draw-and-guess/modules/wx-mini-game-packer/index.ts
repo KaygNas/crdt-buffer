@@ -1,50 +1,71 @@
-import { defineNuxtModule, addVitePlugin } from '@nuxt/kit'
-import type { OutputOptions } from 'rollup'
-interface WxMiniGamePackerOptions {
-  entry: string;
-}
+import { defineNuxtModule, createResolver } from '@nuxt/kit'
+import * as vite from 'vite'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 
-export default defineNuxtModule<WxMiniGamePackerOptions>({
+const resolver = createResolver(import.meta.url)
+const entryResolver = createResolver(resolver.resolve('../../wx-mini-game'))
+const outputResolver = createResolver(resolver.resolve('../../dist/wx-mini-game'))
+const gameModuleEntry = entryResolver.resolve('game.ts')
+const gameModuleOutput = outputResolver.resolve('')
+export default defineNuxtModule({
   meta: {
     name: 'wx-mini-game-packer'
   },
-  setup () {
-    // compile an extra output for wx mini game
-    addVitePlugin(() => {
-      return {
-        name: 'wx-mini-game-packer',
-        apply: 'build',
-        async buildEnd () {
-          const gameModuleId = Array.from(this.getModuleIds()).find(id => id.endsWith('game/index.ts'))!
-          const gameModuleInfo = this.getModuleInfo(gameModuleId)!
-          const collectAllImportedModules = (moduleId: string, result: string[] = []) => {
-            const moduleInfo = this.getModuleInfo(moduleId)!
-            result.push(moduleId)
-            moduleInfo.importedIds.forEach((importedModuleId) => {
-              if (!result.includes(importedModuleId)) {
-                collectAllImportedModules(importedModuleId, result)
+  hooks: {
+  },
+  setup (_, nuxt) {
+    const catpureViteConfig = () => {
+      return new Promise<vite.UserConfig>((resolve) => {
+        nuxt.hook('vite:configResolved', (config, env) => {
+          if (env.isClient) {
+            resolve(config)
+          }
+        })
+      })
+    }
+    const viteConfig = catpureViteConfig()
+
+    const buildWxMiniGame = async () => {
+      // eslint-disable-next-line no-console
+      console.log('building wx-mini-game')
+
+      const config = await viteConfig
+      await vite.build({
+        ...config,
+        logLevel: 'warn',
+        build: {
+          target: config.build?.target,
+          rollupOptions: {
+            input: gameModuleEntry,
+            output: {
+              dir: gameModuleOutput,
+              format: 'es',
+              entryFileNames: '[name].js',
+              manualChunks: (id) => {
+                if (id.includes('wx-mini-game')) {
+                  return 'game'
+                }
+                else {
+                  return 'vendor'
+                }
               }
-            })
-            return result
-          }
-          const emitAllImportedModules = (moduleIds: string[]) => {
-            moduleIds.forEach((moduleId) => {
-              const moduleInfo = this.getModuleInfo(moduleId)!
-              this.emitFile({
-                id: moduleInfo.id,
-                type: 'chunk'
-              })
-            })
-          }
-          const allImportedModules = collectAllImportedModules(gameModuleId)
+            }
+          },
+          minify: false
+        },
+        plugins: [
+          ...config.plugins!,
+          viteStaticCopy({
+            targets: [
+              { src: entryResolver.resolve('*.json'), dest: gameModuleOutput }
+            ]
+          })
+        ]
+      })
+    }
 
-          emitAllImportedModules(allImportedModules)
-
-          console.log('gameModuleIds', gameModuleId)
-          console.log('gameModuleInfo', gameModuleInfo)
-          console.log('gameModuleInfo.importedModules', allImportedModules)
-        }
-      }
+    nuxt.hook('close', () => {
+      buildWxMiniGame()
     })
   }
 })

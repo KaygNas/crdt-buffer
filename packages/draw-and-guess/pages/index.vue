@@ -1,13 +1,10 @@
 <script lang='ts' setup>
-import type { Socket } from 'socket.io-client'
-
+import { io } from 'socket.io-client'
 import type { Platform } from '~/game'
 import { Game } from '~/game'
 import { generateRandom } from '~/utils'
 
 definePageMeta({ layout: 'default' })
-
-const { $io } : { $io: Socket} = useNuxtApp()
 
 const canvasRef = ref<HTMLCanvasElement>()
 onMounted(() => {
@@ -20,7 +17,7 @@ onMounted(() => {
       width: Math.min(375, parentWidth),
       height: parentHeight
     }),
-    getIo: () => $io,
+    getIo: () => io(),
     getUser: () => ({
       id: crypto.randomUUID().replaceAll('-', ''),
       name: generateRandom(4)

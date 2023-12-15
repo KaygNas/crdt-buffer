@@ -10,7 +10,6 @@ export default defineNuxtConfig({
       TOKEN: process.env.TURSO_TOKEN || 'MOCK_TOKEN'
     }
   },
-  plugins: ['~/plugins/socket.client'],
   nitro: {
     entry: process.env.NODE_ENV === 'production' ? undefined : '../preset/entry.dev',
     preset: './preset',

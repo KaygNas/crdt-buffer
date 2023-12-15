@@ -1,5 +1,6 @@
 import type { Platform } from './interface'
 import { ClientConnect, PixelEditor } from './pixel-editor'
+import { debuglog } from '~/utils/debug'
 
 export class Game {
   public canvas: HTMLCanvasElement

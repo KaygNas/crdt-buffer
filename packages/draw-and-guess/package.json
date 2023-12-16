@@ -10,9 +10,11 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@pixi/ui": "^0.10.1",
     "@vueuse/core": "^10.7.0",
     "crdt-buffer": "workspace:^",
     "eventemitter3": "^5.0.1",
+    "pixi.js": "^7.3.2",
     "socket.io": "^4.7.2",
     "socket.io-client": "^4.7.2",
     "weapp.socket.io": "^2.2.1"

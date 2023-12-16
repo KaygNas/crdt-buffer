@@ -20,7 +20,7 @@ export class Game {
 
   private initCreateRoomScene () {
     const roomCreate = new RoomCreate(this.app)
-    roomCreate.on(RoomCreate.Events.CREATED, () => {
+    roomCreate.on(RoomCreate.Events.CREATED, (event) => {
       this.initJoinRoomScene()
     })
   }

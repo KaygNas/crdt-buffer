@@ -10,7 +10,7 @@ const main = () => {
   const systemInfo = wx.getSystemInfoSync()
 
   const platform: Platform = {
-    createCanvasElement: () => canvas,
+    getCanvas: () => canvas,
     getSize: () => ({
       width: Math.min(375, systemInfo.windowWidth),
       height: systemInfo.screenHeight

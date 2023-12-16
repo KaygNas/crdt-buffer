@@ -12,7 +12,7 @@ onMounted(() => {
   const parentHeight = canvasElement.parentElement!.clientHeight
   const parentWidth = canvasElement.parentElement!.clientWidth
   const platform: Platform = {
-    createCanvasElement: () => canvasElement,
+    getCanvas: () => canvasElement,
     getSize: () => ({
       width: Math.min(375, parentWidth),
       height: parentHeight

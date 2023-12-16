@@ -6,7 +6,7 @@ export interface Size {
 }
 
 export interface Platform {
-  createCanvasElement: () => HTMLCanvasElement;
+  getCanvas: () => HTMLCanvasElement;
   getSize: () => Size;
   getUser: () => User;
   getRoom: () => Room;

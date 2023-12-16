@@ -1,53 +1,57 @@
+import * as PIXI from 'pixi.js'
+import { RoomCreate, RoomJoin, GamePlay, GameEnd } from './scenes'
 import type { Platform } from './interface'
-import { ClientConnect, PixelEditor } from './pixel-editor'
-import { debuglog } from '~/utils/debug'
-
 export class Game {
-  public canvas: HTMLCanvasElement
-  public ctx: CanvasRenderingContext2D
-  public platform: Platform
-  private editor!: PixelEditor
-  private connect!: ClientConnect
+  private app: PIXI.Application
   constructor (platform: Platform) {
-    const canvas = platform.createCanvasElement()
-    const ctx = canvas.getContext('2d')
-    if (!ctx) {
-      throw new Error('Canvas context not found')
-    }
-    this.canvas = canvas
-    this.ctx = ctx
-    this.platform = platform
-    this.initialize()
-  }
-
-  initialize () {
-    this.initEditor()
-    this.resizeCanvas()
-    debuglog('Game initialized', this)
-  }
-
-  initEditor () {
-    const { canvas, platform } = this
+    const canvas = platform.getCanvas()
     const size = platform.getSize()
-    const user = platform.getUser()
-    const room = platform.getRoom()
-    const io = platform.getIo()
-    const artboardSize = { w: size.width, h: size.height }
-    const editor = new PixelEditor(user.id, canvas, artboardSize)
-    const connect = new ClientConnect({ user, room, io, size })
-    connect.onmessage = state => editor.receive(state)
-    editor.onchange = state => connect.send(state)
-    this.editor = editor
-    this.connect = connect
-  }
-
-  resizeCanvas () {
-    const size = this.platform.getSize()
-    this.canvas.width = size.width
-    this.canvas.height = size.height
+    this.app = new PIXI.Application({
+      backgroundColor: 0xFFFFFF,
+      view: canvas,
+      width: size.width,
+      height: size.height
+    })
   }
 
   start () {
-    // TODO
+    this.initCreateRoomScene()
+  }
+
+  private initCreateRoomScene () {
+    const roomCreate = new RoomCreate(this.app)
+    roomCreate.on(RoomCreate.Events.CREATED, () => {
+      this.initJoinRoomScene()
+    })
+  }
+
+  private initJoinRoomScene () {
+    const roomJoin = new RoomJoin(this.app)
+    roomJoin.on(RoomJoin.Events.GAME_START, () => {
+      this.initPlayGameScene()
+    })
+    roomJoin.on(RoomJoin.Events.INIVITE_PLAYER, () => {
+      // TODO: Add invite player logic.
+    })
+    roomJoin.on(RoomJoin.Events.EXIT_ROOM, () => {
+      this.initCreateRoomScene()
+    })
+  }
+
+  private initPlayGameScene () {
+    const gamePlay = new GamePlay(this.app)
+    gamePlay.on(GamePlay.Events.GAME_END, () => {
+      this.initEndGameScene()
+    })
+  }
+
+  private initEndGameScene () {
+    const gameEnd = new GameEnd(this.app)
+    gameEnd.on(GameEnd.Events.PLAY_AGAIN, () => {
+      this.initJoinRoomScene()
+    })
+    gameEnd.on(GameEnd.Events.SHARE, () => {
+      // TODO: Add share logic.
+    })
   }
 }

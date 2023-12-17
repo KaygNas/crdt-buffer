@@ -1,28 +1,42 @@
-import type { Container } from 'pixi.js'
 import { Graphics } from 'pixi.js'
+import { Widget } from './widget'
 
-export class RoomLayout extends Graphics {
-  constructor (opts: {parent: Container, width: number, height: number}) {
+export class RoomLayout extends Widget {
+  background: Graphics
+
+  constructor () {
     super()
-
-    const { width, height, parent } = opts
-    const padding = 24
-    this.beginFill(0x00FFFF).drawRect(0, 0, width - padding * 2, height - padding * 2)
-    this.position.set(padding, padding)
-    this.setParent(parent)
+    this.background = new Graphics()
+    this.view.addChild(this.background)
   }
 
-  layout (...children: Container[]) {
+  layout () {
+    const { view, background } = this
+    const { parent } = view
+
+    if (!parent) {
+      return
+    }
+
     const padding = 24
     const marginTop = 124
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i]
-      child.position.set(
-        0,
-        i === 0
-          ? marginTop
-          : children[i - 1].position.y + children[i - 1].height + padding
-      )
-    }
+    const gap = 12
+
+    background.clear()
+    background.beginFill(0xEEEEEE, 0.5)
+      .drawRect(0, 0, parent.width - padding * 2, parent.height - padding * 2)
+    background.position.set(padding, padding)
+
+    view.children
+      .filter(child => child !== background)
+      .forEach((child, index, children) => {
+        if (index === 0) {
+          child.position.set(padding, marginTop)
+          return
+        }
+        const prevChild = children[index - 1]
+        const bbox = prevChild.getBounds()
+        child.position.set(padding, bbox.bottom + gap)
+      })
   }
 }

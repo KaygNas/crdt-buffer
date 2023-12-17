@@ -1,30 +1,33 @@
-import { Container } from 'pixi.js'
 import { SpriteButton } from './sprite-button'
+import { Widget } from './widget'
 
-export class SpriteButtonGroup extends Container {
+export class SpriteButtonGroup extends Widget {
   buttons: SpriteButton[] = []
 
-  constructor (opts:{parent: Container}) {
-    super()
-
-    const { parent } = opts
-    this.setParent(parent)
+  setButton (...buttons:{text: string}[]) {
+    const _buttons = buttons.map(button => new SpriteButton({ ...button, width: 100, height: 10 }))
+    this.buttons = _buttons
+    this.addChild(...this.buttons)
+    return this.buttons
   }
 
-  setButton (...buttons:{text: string}[]) {
-    this.removeChild(...this.buttons)
+  layout () {
+    const { view, buttons } = this
 
-    const { parent } = this
-    const BUTTON_GAP = 24
-    const width = (parent.width - BUTTON_GAP) / buttons.length
-    const height = 48
-    for (let i = 0; i < buttons.length; i++) {
-      const { text } = buttons[i]
-      const button = new SpriteButton({ parent: this, text, width, height })
-      button.position.set((width + BUTTON_GAP) * i, 0)
-      this.buttons.push(button)
+    if (!view.parent) {
+      return
     }
 
-    return this.buttons
+    const BUTTON_GAP = 24
+    const width = (view.parent.width - BUTTON_GAP) / buttons.length
+    const height = 48
+    for (let i = 0; i < buttons.length; i++) {
+      const button = buttons[i]
+
+      button.background.clear()
+      button.background.beginFill(0x333333).drawRoundedRect(0, 0, width, height, 8)
+      button.view.x = (width + BUTTON_GAP) * i
+      button.view.y = 0
+    }
   }
 }

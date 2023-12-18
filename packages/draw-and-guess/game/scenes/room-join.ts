@@ -6,7 +6,7 @@ import { RoomLayout } from '../widgets/room-layout'
 import { LoadingProgressBar } from '../widgets/loading-progress-bar'
 import { PlayerAvatarList } from '../widgets/player-avatar-list'
 import { Scene } from './scene'
-import type { Room } from '~/interfaces'
+import type { Player, Room } from '~/interfaces'
 
 /**
  * The Scene for creating a new room.
@@ -19,23 +19,28 @@ export class RoomJoin extends Scene {
   }
 
   room: Room
+  playerList: Player[]
+  roomLayout: RoomLayout
+  roomTitle: RoomTitle
+  gameThemeInput: GameThemeInput
+  loadingProgressBar: LoadingProgressBar
+  playerAvatarList: PlayerAvatarList
+  buttonGroup: SpriteButtonGroup
 
   constructor (app: Application, room: Room) {
     super(app)
 
     this.room = room
+    this.playerList = []
 
-    const layout = new RoomLayout()
-
-    const title = this.createTitle()
-    const input = this.createGameThemeInput()
-    const progressBar = this.createProgressBar()
-    const avatarList = this.createAvatarList()
-    const buttons = this.createButtons()
-
-    layout.addChild(title, input, progressBar, avatarList, buttons)
-
-    this.addChild(layout)
+    this.roomLayout = new RoomLayout()
+    this.roomTitle = this.createTitle()
+    this.gameThemeInput = this.createGameThemeInput()
+    this.loadingProgressBar = this.createProgressBar()
+    this.playerAvatarList = this.createAvatarList()
+    this.buttonGroup = this.createButtons()
+    this.roomLayout.addChild(this.roomTitle, this.gameThemeInput, this.loadingProgressBar, this.playerAvatarList, this.buttonGroup)
+    this.addChild(this.roomLayout)
   }
 
   private createTitle () {
@@ -69,6 +74,4 @@ export class RoomJoin extends Scene {
     })
     return buttonGroup
   }
-
-  updatePlayerList () {}
 }

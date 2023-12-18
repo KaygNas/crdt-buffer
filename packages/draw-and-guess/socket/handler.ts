@@ -6,7 +6,8 @@ import type { Server } from 'socket.io'
 import { debuglog } from '~/utils/debug'
 import { useTurso } from '~/utils/turso'
 import * as SocketEvents from '~/constants/socket-events'
-import type { Room, User } from '~/interfaces'
+import type { Room, Player } from '~/interfaces'
+import { roomDatabase } from '~/utils'
 
 export const socketHandler = async (io: Server) => {
   debuglog('✔️ Hello from the socket handler')
@@ -19,28 +20,28 @@ export const socketHandler = async (io: Server) => {
       debuglog('socket disconnected', socket.id)
     })
 
-    socket.on(SocketEvents.JOIN_ROOM, (room:Room, user:User) => {
-      debuglog(`[Socket.io] joinRoom received room ${room.id} from user ${user.name}(${user.id})`)
+    socket.on(SocketEvents.JOIN_ROOM, (room: Room, player: Player) => {
+      debuglog(`[Socket.io] joinRoom received room ${room.id} from user ${player.name}(${player.id})`)
       socket.join(room.id)
+      roomDatabase.addPlayerToRoom(room.id, player)
       io.to(room.id).emit(SocketEvents.PLAYER_JOIN, {
-        from_id: user.id,
-        from_name: user.name,
-        system: true,
-        content: `${user.name ?? user.id} joined the thread`
+        from: player,
+        playerList: roomDatabase.getPlayersOfRoom(room.id),
+        system: true
       })
     })
 
-    socket.on(SocketEvents.LEAVE_ROOM, (room: Room, user: User) => {
+    socket.on(SocketEvents.LEAVE_ROOM, (room: Room, player: Player) => {
       socket.leave(room.id)
+      roomDatabase.removePlayerFromRoom(room.id, player.id)
       io.to(room.id).emit(SocketEvents.PLAYER_LEAVE, {
-        from_id: user.id,
-        from_name: user.name,
-        system: true,
-        content: `${user.name ?? user.id} left the thread`
+        from: player,
+        playerList: roomDatabase.getPlayersOfRoom(room.id),
+        system: true
       })
     })
 
-    socket.on(SocketEvents.PAINT, function (room:Room, user:User, message) {
+    socket.on(SocketEvents.PAINT, function (room:Room, user:Player, message) {
       debuglog(`[Socket.io] message received room ${room.id} from user ${user.id} ${user.name}}`)
       const thread = threads.find(t => t.id === room.id)
       if (thread) {

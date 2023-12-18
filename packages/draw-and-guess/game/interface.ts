@@ -1,4 +1,4 @@
-import type { Socket, User, Room } from '~/interfaces'
+import type { Socket, Player, Room } from '~/interfaces'
 
 export interface Size {
   width: number;
@@ -8,7 +8,7 @@ export interface Size {
 export interface Platform {
   getCanvas: () => HTMLCanvasElement;
   getSize: () => Size;
-  getUser: () => User;
+  getUser: () => Player;
   getRoom: () => Promise<Room | undefined>;
   getIo: () => Socket;
 }

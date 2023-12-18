@@ -1,6 +1,6 @@
 export type { Socket } from 'socket.io-client'
 
-export interface User {
+export interface Player {
   id: string;
   name: string;
 }

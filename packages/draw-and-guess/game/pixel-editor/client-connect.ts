@@ -3,17 +3,17 @@
 
 import type { Size } from '../interface'
 import type { PixelData } from './pixel-data'
-import type { Room, User, Socket } from '~/interfaces'
+import type { Room, Player, Socket } from '~/interfaces'
 import { debuglog } from '~/utils/debug'
 
 type Listener = (state: PixelData['state']) => void;
 
 export class ClientConnect {
-  #user: User
+  #user: Player
   #room: Room
   #size: Size
   #io: Socket
-  constructor (config: { user: User, room: Room, io: Socket, size: Size}) {
+  constructor (config: { user: Player, room: Room, io: Socket, size: Size}) {
     this.#size = config.size
     this.#user = config.user
     this.#room = config.room
@@ -21,12 +21,12 @@ export class ClientConnect {
     this.#initialize()
   }
 
-  get user (): User {
+  get user (): Player {
     return this.#user
   }
 
   set onmessage (listener: Listener) {
-    const byteListenr = (from: User, state: [string, any][]) => {
+    const byteListenr = (from: Player, state: [string, any][]) => {
       if (from.id === this.user.id) {
         return
       }
@@ -39,10 +39,10 @@ export class ClientConnect {
 
   #initialize () {
     this.#io.emit('joinRoom', this.#room.id, this.user)
-    this.#io.on('join', (user: User, message: any) => {
+    this.#io.on('join', (user: Player, message: any) => {
       debuglog('[join]', user, message)
     })
-    this.#io.on('leave', (user: User, message: any) => {
+    this.#io.on('leave', (user: Player, message: any) => {
       debuglog('[leave]', user, message)
     })
   }

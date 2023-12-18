@@ -31,7 +31,10 @@ export class Game {
   private initCreateRoomScene () {
     const roomCreate = new RoomCreate(this.app)
     roomCreate.on(RoomCreate.Events.CREATED, async (event) => {
-      const res = await $fetch('/api/room/create', { params: event })
+      const res = await $fetch('/api/room/create', {
+        body: { event, player: this.platform.getUser() },
+        method: 'POST'
+      })
       this.initJoinRoomScene(res.room)
     })
   }
@@ -40,8 +43,6 @@ export class Game {
     const { platform } = this
     const io = platform.getIo()
     const user = platform.getUser()
-
-    io.emit(SocketEvents.JOIN_ROOM, room, user)
 
     const roomJoin = new RoomJoin(this.app, room)
     roomJoin.on(RoomJoin.Events.GAME_START, () => {
@@ -54,6 +55,18 @@ export class Game {
     })
     roomJoin.on(RoomJoin.Events.EXIT_ROOM, () => {
       this.initCreateRoomScene()
+    })
+
+    io.emit(SocketEvents.JOIN_ROOM, room, user)
+    io.on(SocketEvents.PLAYER_JOIN, (data) => {
+      roomJoin.playerList = data.playerList
+      roomJoin.playerAvatarList.setPlayers(data.playerList)
+      console.log(data)
+    })
+    io.on(SocketEvents.PLAYER_LEAVE, (data) => {
+      roomJoin.playerList = data.playerList
+      roomJoin.playerAvatarList.setPlayers(data.playerList)
+      console.log(data)
     })
   }
 

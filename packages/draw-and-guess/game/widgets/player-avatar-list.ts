@@ -50,16 +50,15 @@ export class PlayerAvatarList extends Widget {
 
   layout (): void {
     const { view } = this
-    const { parent } = view
 
-    if (!parent) {
+    if (!view.parent) {
       return
     }
 
-    const maxWidth = parent.width
+    const maxWidth = view.parent.width
     const cols = 4
     const itemWidth = maxWidth / cols
-    const itemHeight = 64
+    const itemHeight = 80
     view.children.forEach((child, index) => {
       const row = Math.floor(index / cols)
       const col = index % cols

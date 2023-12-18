@@ -1,4 +1,4 @@
-import type { Application, Container } from 'pixi.js'
+import type { Application } from 'pixi.js'
 import { SpriteButtonGroup } from '../widgets/sprite-button-group'
 import { GameThemeInput } from '../widgets/game-theme-input'
 import { RoomTitle } from '../widgets/room-title'
@@ -20,44 +20,41 @@ export class RoomJoin extends Scene {
   constructor (app: Application) {
     super(app)
 
-    const layout = new RoomLayout({
-      parent: this,
-      width: app.view.width,
-      height: app.view.height
-    })
+    const layout = new RoomLayout()
 
-    const title = this.createTitle(layout)
-    const input = this.createGameThemeInput(layout)
-    const progressBar = this.createProgressBar(layout)
-    const playerAvatarList = this.createPlayerAvatarList(layout)
-    const buttons = this.createButtons(layout)
+    const title = this.createTitle()
+    const input = this.createGameThemeInput()
+    const progressBar = this.createProgressBar()
+    const avatarList = this.createAvatarList()
+    const buttons = this.createButtons()
 
-    layout.layout(title, input, progressBar, playerAvatarList.view, buttons)
+    layout.addChild(title, input, progressBar, avatarList, buttons)
+
+    this.addChild(layout)
   }
 
-  private createTitle (parent: Container) {
-    const title = new RoomTitle({ parent, text: 'XXX房间' })
+  private createTitle () {
+    const title = new RoomTitle({ text: 'XXX房间' })
     return title
   }
 
-  private createGameThemeInput (parent: Container) {
-    const gameThemeInput = new GameThemeInput({ parent })
+  private createGameThemeInput () {
+    const gameThemeInput = new GameThemeInput()
     return gameThemeInput
   }
 
-  private createProgressBar (parent: Container) {
-    const progressBar = new LoadingProgressBar({ parent })
+  private createProgressBar () {
+    const progressBar = new LoadingProgressBar()
     return progressBar
   }
 
-  private createPlayerAvatarList (parent: Container) {
-    const list = new PlayerAvatarList({})
-    parent.addChild(list.view)
-    return list
+  private createAvatarList () {
+    const avatarList = new PlayerAvatarList()
+    return avatarList
   }
 
-  private createButtons (parent: Container) {
-    const buttonGroup = new SpriteButtonGroup({ parent })
+  private createButtons () {
+    const buttonGroup = new SpriteButtonGroup()
     const [button1, button2] = buttonGroup.setButton({ text: '开始游戏' }, { text: '邀请好友' })
     button1.button.onPress.connect(() => {
       this.emit(RoomJoin.Events.GAME_START)

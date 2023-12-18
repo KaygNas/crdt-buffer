@@ -11,6 +11,7 @@ onMounted(() => {
   const canvasElement = canvasRef.value!
   const parentHeight = canvasElement.parentElement!.clientHeight
   const parentWidth = canvasElement.parentElement!.clientWidth
+  const route = useRoute()
   const platform: Platform = {
     getCanvas: () => canvasElement,
     getSize: () => ({
@@ -22,10 +23,10 @@ onMounted(() => {
       id: crypto.randomUUID().replaceAll('-', ''),
       name: generateRandom(4)
     }),
-    getRoom: () => ({
-      id: '1', // TODO
-      name: 'test'
-    })
+    getRoom: async () => {
+      const { room } = await $fetch('/api/room/id', { params: { roomId: route.query.roomId } })
+      return room
+    }
   }
   const game = new Game(platform)
   game.start()

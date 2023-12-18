@@ -5,6 +5,8 @@ import type { Server } from 'socket.io'
 
 import { debuglog } from '~/utils/debug'
 import { useTurso } from '~/utils/turso'
+import * as SocketEvents from '~/constants/socket-events'
+import type { Room, User } from '~/interfaces'
 
 export const socketHandler = async (io: Server) => {
   debuglog('✔️ Hello from the socket handler')
@@ -17,10 +19,10 @@ export const socketHandler = async (io: Server) => {
       debuglog('socket disconnected', socket.id)
     })
 
-    socket.on('joinRoom', (room, user) => {
-      debuglog(`[Socket.io] joinRoom received room ${room} from user ${user.name}(${user.id})`)
-      socket.join(room)
-      io.to(room).emit('join', {
+    socket.on(SocketEvents.JOIN_ROOM, (room:Room, user:User) => {
+      debuglog(`[Socket.io] joinRoom received room ${room.id} from user ${user.name}(${user.id})`)
+      socket.join(room.id)
+      io.to(room.id).emit(SocketEvents.PLAYER_JOIN, {
         from_id: user.id,
         from_name: user.name,
         system: true,
@@ -28,9 +30,9 @@ export const socketHandler = async (io: Server) => {
       })
     })
 
-    socket.on('leaveRoom', (room, user) => {
-      socket.leave(room)
-      io.to(room).emit('leave', {
+    socket.on(SocketEvents.LEAVE_ROOM, (room: Room, user: User) => {
+      socket.leave(room.id)
+      io.to(room.id).emit(SocketEvents.PLAYER_LEAVE, {
         from_id: user.id,
         from_name: user.name,
         system: true,
@@ -38,12 +40,12 @@ export const socketHandler = async (io: Server) => {
       })
     })
 
-    socket.on('paint', function (room, user, message) {
-      debuglog(`[Socket.io] message received room ${room} from user ${user.id} ${user.name}}`)
-      const thread = threads.find(t => t.id === room)
+    socket.on(SocketEvents.PAINT, function (room:Room, user:User, message) {
+      debuglog(`[Socket.io] message received room ${room.id} from user ${user.id} ${user.name}}`)
+      const thread = threads.find(t => t.id === room.id)
       if (thread) {
-        debuglog(`[Socket.io] emit paint room ${room} from user ${user.id} ${user.name}}`)
-        io.to(room).emit('paint', user, message)
+        debuglog(`[Socket.io] emit paint room ${room.id} from user ${user.id} ${user.name}}`)
+        io.to(room.id).emit('paint', user, message)
       }
     })
   })

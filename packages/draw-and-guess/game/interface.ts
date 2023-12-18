@@ -9,6 +9,6 @@ export interface Platform {
   getCanvas: () => HTMLCanvasElement;
   getSize: () => Size;
   getUser: () => User;
-  getRoom: () => Room;
+  getRoom: () => Promise<Room | undefined>;
   getIo: () => Socket;
 }

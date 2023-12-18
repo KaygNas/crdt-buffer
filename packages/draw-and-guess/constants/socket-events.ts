@@ -1,0 +1,5 @@
+export const JOIN_ROOM = 'join-room'
+export const LEAVE_ROOM = 'leave-room'
+export const PAINT = 'paint'
+export const PLAYER_JOIN = 'player-join'
+export const PLAYER_LEAVE = 'player-leave'

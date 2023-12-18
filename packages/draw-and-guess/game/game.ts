@@ -1,9 +1,13 @@
 import * as PIXI from 'pixi.js'
 import { RoomCreate, RoomJoin, GamePlay, GameEnd } from './scenes'
 import type { Platform } from './interface'
+import type { Room } from '~/interfaces'
+import * as SocketEvents from '~/constants/socket-events'
 export class Game {
   private app: PIXI.Application
+  private platform: Platform
   constructor (platform: Platform) {
+    this.platform = platform
     const canvas = platform.getCanvas()
     const size = platform.getSize()
     this.app = new PIXI.Application({
@@ -14,24 +18,39 @@ export class Game {
     })
   }
 
-  start () {
-    this.initCreateRoomScene()
+  async start () {
+    const room = await this.platform.getRoom()
+    if (room) {
+      this.initJoinRoomScene(room)
+    }
+    else {
+      this.initCreateRoomScene()
+    }
   }
 
   private initCreateRoomScene () {
     const roomCreate = new RoomCreate(this.app)
-    roomCreate.on(RoomCreate.Events.CREATED, (event) => {
-      this.initJoinRoomScene()
+    roomCreate.on(RoomCreate.Events.CREATED, async (event) => {
+      const res = await $fetch('/api/room/create', { params: event })
+      this.initJoinRoomScene(res.room)
     })
   }
 
-  private initJoinRoomScene () {
-    const roomJoin = new RoomJoin(this.app)
+  private initJoinRoomScene (room: Room) {
+    const { platform } = this
+    const io = platform.getIo()
+    const user = platform.getUser()
+
+    io.emit(SocketEvents.JOIN_ROOM, room, user)
+
+    const roomJoin = new RoomJoin(this.app, room)
     roomJoin.on(RoomJoin.Events.GAME_START, () => {
       this.initPlayGameScene()
     })
     roomJoin.on(RoomJoin.Events.INIVITE_PLAYER, () => {
       // TODO: Add invite player logic.
+      const url = `${location.origin}?roomId=${room.id}`
+      console.log(url)
     })
     roomJoin.on(RoomJoin.Events.EXIT_ROOM, () => {
       this.initCreateRoomScene()

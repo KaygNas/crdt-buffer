@@ -6,6 +6,7 @@ import { RoomLayout } from '../widgets/room-layout'
 import { LoadingProgressBar } from '../widgets/loading-progress-bar'
 import { PlayerAvatarList } from '../widgets/player-avatar-list'
 import { Scene } from './scene'
+import type { Room } from '~/interfaces'
 
 /**
  * The Scene for creating a new room.
@@ -17,8 +18,12 @@ export class RoomJoin extends Scene {
     EXIT_ROOM: 'exit-room'
   }
 
-  constructor (app: Application) {
+  room: Room
+
+  constructor (app: Application, room: Room) {
     super(app)
+
+    this.room = room
 
     const layout = new RoomLayout()
 
@@ -34,7 +39,7 @@ export class RoomJoin extends Scene {
   }
 
   private createTitle () {
-    const title = new RoomTitle({ text: 'XXX房间' })
+    const title = new RoomTitle({ text: this.room.name })
     return title
   }
 

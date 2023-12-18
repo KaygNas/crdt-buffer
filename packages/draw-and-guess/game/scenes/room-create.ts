@@ -5,6 +5,11 @@ import { RoomTitle } from '../widgets/room-title'
 import { RoomLayout } from '../widgets/room-layout'
 import { Scene } from './scene'
 
+export interface RoomCreateEvent {
+  themeType: 'custom' | 'random',
+  theme: string
+}
+
 /**
  * The Scene for creating a new room.
  */
@@ -38,6 +43,7 @@ export class RoomCreate extends Scene {
     const gameThemeInput = new GameThemeInput()
     gameThemeInput.input.on('change', (value: string) => {
       this.inputValue = value
+      console.log(this.inputValue)
     })
     return gameThemeInput
   }
@@ -46,16 +52,18 @@ export class RoomCreate extends Scene {
     const buttonGroup = new SpriteButtonGroup()
     const [button1, button2] = buttonGroup.setButton({ text: '生成题目' }, { text: '随机生成' })
     button1.button.onPress.connect(() => {
-      this.emit(RoomCreate.Events.CREATED, {
-        gameThemeType: 'custom',
-        inputValue: this.inputValue
-      })
+      const event: RoomCreateEvent = {
+        themeType: 'custom',
+        theme: this.inputValue
+      }
+      this.emit(RoomCreate.Events.CREATED, event)
     })
     button2.button.onPress.connect(() => {
-      this.emit(RoomCreate.Events.CREATED, {
-        gameThemeType: 'random',
-        inputValue: this.inputValue
-      })
+      const event: RoomCreateEvent = {
+        themeType: 'random',
+        theme: ''
+      }
+      this.emit(RoomCreate.Events.CREATED, event)
     })
     return buttonGroup
   }

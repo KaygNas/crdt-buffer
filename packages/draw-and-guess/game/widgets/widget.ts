@@ -17,6 +17,10 @@ export abstract class Widget extends utils.EventEmitter {
   abstract layout (): void
 
   private _layout () {
+    if (!this.view.parent) {
+      return
+    }
+
     this.layout()
     this.children.forEach(child => child._layout())
   }

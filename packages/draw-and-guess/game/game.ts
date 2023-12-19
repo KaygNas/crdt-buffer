@@ -24,7 +24,8 @@ export class Game {
       this.initJoinRoomScene(room)
     }
     else {
-      this.initCreateRoomScene()
+      this.initPlayGameScene()
+      // this.initCreateRoomScene()
     }
   }
 

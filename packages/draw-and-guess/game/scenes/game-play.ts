@@ -3,7 +3,48 @@ import { Graphics } from 'pixi.js'
 import { GamePlayHeader } from '../widgets/game-play-header'
 import { PlayerAvatarList } from '../widgets/game-play-player-avatar-list'
 import { Widget } from '../widgets/widget'
+import { GamePlayToolBox } from '../widgets/game-play-toolbox'
+import { GamePlayPaintBoard } from '../widgets/game-play-paint-board'
 import { Scene } from './scene'
+
+class GamePlayLayout extends Widget {
+  background: Graphics
+  header: GamePlayHeader
+  paintBoard: GamePlayPaintBoard
+  toolBox: GamePlayToolBox
+  playerAvatarList: PlayerAvatarList
+
+  constructor (opts: { header: GamePlayHeader, toolBox: GamePlayToolBox, paintBoard: GamePlayPaintBoard, playerAvatarList: PlayerAvatarList }) {
+    super()
+
+    this.background = new Graphics()
+    this.view.addChild(this.background)
+
+    const { header, paintBoard, toolBox, playerAvatarList } = opts
+    this.header = header
+    this.paintBoard = paintBoard
+    this.toolBox = toolBox
+    this.playerAvatarList = playerAvatarList
+    this.addChild(header, paintBoard, toolBox, playerAvatarList)
+  }
+
+  layout (): void {
+    const { header, background, paintBoard, toolBox, playerAvatarList, view } = this
+
+    background.clear()
+    background.beginFill(0xAAAAAA).drawRect(0, 0, view.parent.width, view.parent.height)
+    playerAvatarList.view.position.set(0, background.height - playerAvatarList.view.height)
+    toolBox.view.position.set(0, playerAvatarList.view.position.y - toolBox.view.height)
+    paintBoard.view.mask = new Graphics().beginFill(0xFFFFFF)
+      .drawRect(
+        0,
+        header.view.height,
+        background.width,
+        background.height - header.view.height - toolBox.view.height - playerAvatarList.view.height
+      )
+  }
+}
+
 /**
  * The Scene for creating a new room.
  */
@@ -12,46 +53,25 @@ export class GamePlay extends Scene {
     GAME_END: 'game-end'
   }
 
-  private playerAvatarList: PlayerAvatarList
+  private gamePlayLayout: GamePlayLayout
 
   constructor (app: Application) {
     super(app)
 
-    const gamePlayHeader = new GamePlayHeader()
-    gamePlayHeader.answer.setAnswer('test')
+    const header = new GamePlayHeader()
+    header.answer.setAnswer('test')
 
+    const paintBoard = new GamePlayPaintBoard()
+    const toolBox = new GamePlayToolBox()
     const playerAvatarList = new PlayerAvatarList()
-    playerAvatarList.setPlayers([{ avatar: '', name: '' }])
-    this.playerAvatarList = playerAvatarList
 
-    const layout = new GamePlayLayout({ header: gamePlayHeader, playerAvatarList })
+    playerAvatarList.setPlayers([{ avatar: '', name: '' }])
+
+    const layout = new GamePlayLayout({ header, paintBoard, toolBox, playerAvatarList })
+    this.gamePlayLayout = layout
 
     this.addChild(layout)
   }
 
   // TODO: Add methods for updating the game state.
-}
-
-class GamePlayLayout extends Widget {
-  background: Graphics
-  header: GamePlayHeader
-  playerAvatarList: PlayerAvatarList
-  constructor (opts: { header: GamePlayHeader, playerAvatarList: PlayerAvatarList }) {
-    super()
-    const { header, playerAvatarList } = opts
-    this.background = new Graphics()
-    this.header = header
-    this.playerAvatarList = playerAvatarList
-    this.view.addChild(this.background)
-    this.addChild(header, playerAvatarList)
-  }
-
-  layout (): void {
-    const { header, background, playerAvatarList, view } = this
-
-    background.clear()
-    background.beginFill(0xAAAAAA).drawRect(0, 0, view.parent.width, view.parent.height)
-
-    playerAvatarList.view.position.set(0, background.height - playerAvatarList.view.height)
-  }
 }

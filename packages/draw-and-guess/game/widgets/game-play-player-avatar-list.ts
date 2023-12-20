@@ -1,10 +1,11 @@
 import { Graphics } from 'pixi.js'
 import { Widget } from './widget'
+import type { Player } from '~/interfaces'
 
 class PlayerAvatar extends Widget {
   avatar: Graphics
 
-  constructor (opts: {name: string, avatar: string}) {
+  constructor (opts: Player) {
     super()
 
     const { view } = this
@@ -35,7 +36,7 @@ export class PlayerAvatarList extends Widget {
     this.addChild(...this.playerAvatars)
   }
 
-  setPlayers (players: {name: string, avatar: string}[]) {
+  setPlayers (players: Player[]) {
     players.forEach((player, index) => {
       // TODO
     })
@@ -43,11 +44,8 @@ export class PlayerAvatarList extends Widget {
 
   private createPlaceholderPlayerAvatars (num: number) {
     const placeholderPlayerAvatars: PlayerAvatar[] = Array.from({ length: num })
-      .map(() => ({ name: '等待加入', avatar: 'TODO' }))
-      .map(player => new PlayerAvatar({
-        name: player.name,
-        avatar: player.avatar
-      }))
+      .map(() => ({ id: '-', name: '等待加入', avatar: 'TODO' }))
+      .map(player => new PlayerAvatar(player))
     return placeholderPlayerAvatars
   }
 

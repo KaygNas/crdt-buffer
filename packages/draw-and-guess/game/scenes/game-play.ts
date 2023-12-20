@@ -6,6 +6,7 @@ import { Widget } from '../widgets/widget'
 import { GamePlayToolBox, MessageInput } from '../widgets/game-play-toolbox'
 import { GamePlayPaintBoard } from '../widgets/game-play-paint-board'
 import { Scene } from './scene'
+import type { Player } from '~/interfaces'
 
 class GamePlayLayout extends Widget {
   background: Graphics
@@ -45,6 +46,48 @@ class GamePlayLayout extends Widget {
   }
 }
 
+interface GameRound {
+  /** round number */
+  round: number
+  /** round answers */
+  answer: string
+  /** round paintist */
+  paintist: Player
+  /** round paintist teamates */
+  teamates: Player[]
+  /** round time */
+  time: number
+}
+
+class GameRoundController {
+  /** current round */
+  currentRound: GameRound
+
+  constructor (
+    /** answers to draw for each round */
+    public answers: string[],
+    /** players in the game */
+    public players: Player[]
+  ) {
+    this.currentRound = this.newRound(0)
+  }
+
+  nextRound (): void {
+    this.currentRound = this.newRound(this.currentRound.round + 1)
+  }
+
+  private newRound (round: number): GameRound {
+    const { answers, players } = this
+    return {
+      round,
+      answer: answers[round],
+      paintist: players[round],
+      teamates: [],
+      time: 60
+    }
+  }
+}
+
 /**
  * The Scene for creating a new room.
  */
@@ -54,21 +97,27 @@ export class GamePlay extends Scene {
   }
 
   private gamePlayLayout: GamePlayLayout
+  private gameRoundControler: GameRoundController
 
   constructor (app: Application) {
     super(app)
 
-    const header = new GamePlayHeader()
-    header.answer.setAnswer('test')
+    const answers = ['test', 'test2']
+    const players: Player[] = [{ id: '1', avatar: '', name: 'A' }, { id: '2', avatar: '', name: 'B' }]
+    const gameRoundControler = new GameRoundController(answers, players)
+    this.gameRoundControler = gameRoundControler
 
+    const header = new GamePlayHeader()
     const paintBoard = new GamePlayPaintBoard()
     const toolBox = new GamePlayToolBox()
     const playerAvatarList = new PlayerAvatarList()
 
-    playerAvatarList.setPlayers([{ avatar: '', name: '' }])
-
     const layout = new GamePlayLayout({ header, paintBoard, toolBox, playerAvatarList })
     this.gamePlayLayout = layout
+
+    header.timer.setTimer(gameRoundControler.currentRound.time)
+    header.answer.setAnswer(gameRoundControler.currentRound.answer)
+    playerAvatarList.setPlayers(gameRoundControler.players)
 
     this.addChild(layout)
     this.listenEvents()

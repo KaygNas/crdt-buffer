@@ -38,6 +38,7 @@ class Timer extends Widget {
    */
   setTimer (time: number): void {
     this.time = time
+    this.timeText.text = time.toString()
   }
 
   /**

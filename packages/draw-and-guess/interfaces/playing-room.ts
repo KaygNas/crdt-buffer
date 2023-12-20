@@ -2,23 +2,20 @@ import type { AnswerTheme, Player, Room } from './shared'
 
 export interface PlayingRoomPlayer extends Player {
   score: number;
-  isPainist: boolean;
-  isAssistant: boolean;
-  isGuesser: boolean;
-  isCorrectGuesser: boolean;
 }
 
 export interface GameRound {
   round: number;
   answer: string;
-  paintist: PlayingRoomPlayer;
-  assistants: PlayingRoomPlayer[];
-  guessers: PlayingRoomPlayer[];
-  correctGuessers: PlayingRoomPlayer[];
+  paintist: PlayingRoomPlayer['id'];
+  assistants: PlayingRoomPlayer['id'][];
+  guessers: PlayingRoomPlayer['id'][];
+  correctGuessers: PlayingRoomPlayer['id'][];
   totalTime: number;
 }
 
 export interface PlayingRoom extends Room {
+  state: 'playing'
   players: PlayingRoomPlayer[];
   answerTheme: AnswerTheme;
   currentGameRound: GameRound;

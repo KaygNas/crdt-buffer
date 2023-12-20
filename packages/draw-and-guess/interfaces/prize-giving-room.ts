@@ -6,5 +6,6 @@ export interface PrizeGivingRoomPlayer extends Player{
 }
 
 export interface PrizeGivingRoom extends Room {
+  state: 'prizing'
   players: PrizeGivingRoomPlayer[];
 }

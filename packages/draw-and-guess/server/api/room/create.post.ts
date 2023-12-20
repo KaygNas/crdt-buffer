@@ -11,6 +11,6 @@ export interface RoomCreateResponse {
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const room: Room = roomDatabase.createRoom(body.player)
+  const room = roomDatabase.createRoom(body.player, body.theme).room
   return { room, body }
 })

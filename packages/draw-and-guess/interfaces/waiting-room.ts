@@ -6,6 +6,7 @@ export interface WaitingRoomPlayer extends Player {
 }
 
 export interface WaitingRoom extends Room {
+  state: 'waiting';
   players: WaitingRoomPlayer[];
   answerTheme: AnswerTheme;
 }

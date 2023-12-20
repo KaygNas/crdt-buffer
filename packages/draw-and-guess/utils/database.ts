@@ -1,24 +1,139 @@
-import type { Player, Room } from '~/interfaces'
+import type { PlayingRoomPlayer, Player, WaitingRoom, PlayingRoom, PrizeGivingRoom, WaitingRoomPlayer, GameRound, PrizeGivingRoomPlayer } from '~/interfaces'
 import { generateRandom } from '~/utils'
 
-interface SocketPlayer extends Player {
-  socketId: string
-}
-interface RoomPlayer extends SocketPlayer {
+type Room = WaitingRoom | PlayingRoom | PrizeGivingRoom
+
+class RoomHelper {
   room: Room
+  constructor (room: Room) {
+    this.room = room
+  }
+
+  getPlayer (playerId: string) {
+    return this.room.players.find(player => player.id === playerId)
+  }
+
+  addPlayer (player: Player) {
+    const _player: WaitingRoomPlayer = {
+      ...player,
+      isHost: false,
+      isReady: false
+    }
+    this.room.players.push(_player as any)
+  }
+
+  removePlayer (playerId: string) {
+    this.room.players = this.room.players.filter(player => player.id !== playerId) as any
+  }
+
+  setNextState (state: Room['state']) {
+    if (this.room.state === state) {
+      return
+    }
+
+    switch (state) {
+      case 'playing':
+        this.setPlaying()
+        break
+      case 'prizing':
+        this.setPrizing()
+        break
+      default:
+        throw new Error(`Invalid state ${state}`)
+    }
+  }
+
+  setPlaying () {
+    const room = this.room as WaitingRoom
+    const currentGameRound: GameRound = {
+      answer: room.answerTheme.answers[0].text,
+      paintist: room.players.find(player => player.isHost)!.id,
+      guessers: room.players.filter(player => !player.isHost).map(player => player.id),
+      assistants: [],
+      correctGuessers: [],
+      round: 0,
+      totalTime: 60
+    }
+    const players = room.players.map<PlayingRoomPlayer>(player => ({
+      id: player.id,
+      avatar: player.avatar,
+      name: player.name,
+      score: 0
+    }))
+    const _room: PlayingRoom = {
+      players,
+      currentGameRound,
+      state: 'playing',
+      id: room.id,
+      name: room.name,
+      answerTheme: room.answerTheme
+    }
+    this.room = _room
+  }
+
+  setPrizing () {
+    const room = this.room as PlayingRoom
+    const players = [...room.players].sort((a, b) => b.score - a.score)
+    const _players = players.map<PrizeGivingRoomPlayer>(player => ({
+      id: player.id,
+      avatar: player.avatar,
+      name: player.name,
+      score: player.score,
+      rank: 0
+    }))
+    const _room: PrizeGivingRoom = {
+      players: _players,
+      state: 'prizing',
+      id: room.id,
+      name: room.name
+    }
+    this.room = _room
+  }
+
+  setNextRound () {
+    const room = this.room as PlayingRoom
+    const { currentGameRound, players, answerTheme } = room
+    const nextPaintistIndex = players.findIndex(player => player.id === currentGameRound.paintist) + 1
+    const nextAnswerIndex = answerTheme.answers.findIndex(answer => answer.text === currentGameRound.answer) + 1
+    const nextGameRound: GameRound = {
+      answer: answerTheme.answers[nextAnswerIndex]!.text,
+      paintist: players[nextPaintistIndex].id,
+      guessers: room.players.filter((_, index) => index !== nextPaintistIndex).map(player => player.id),
+      assistants: [],
+      correctGuessers: [],
+      round: 0,
+      totalTime: 60
+    }
+    room.currentGameRound = nextGameRound
+  }
+}
+
+const createRoomHelper = (room?: Room) => {
+  return room ? new RoomHelper(room) : undefined
 }
 
 class RoomDatabase {
   private rooms: Room[] = []
 
-  createRoom (player: SocketPlayer) {
-    const room: Room = { id: generateRandom(8), name: `${player.name}的房间` }
+  createRoom (player: Player, theme: string) {
+    const room: WaitingRoom = {
+      id: generateRandom(8),
+      name: `${player.name}的房间`,
+      state: 'waiting',
+      players: [{ ...player, isHost: true, isReady: true }],
+      answerTheme: {
+        theme,
+        // TODO: pick answers from database
+        answers: [{ text: 'test1' }, { text: 'test2' }]
+      }
+    }
     this.rooms.push(room)
-    return room
+    return createRoomHelper(room)!
   }
 
   getRoom (roomId: string) {
-    return this.rooms.find(room => room.id === roomId)
+    const room = this.rooms.find(room => room.id === roomId)
+    return createRoomHelper(room)
   }
 
   removeRoom (roomId: string) {
@@ -27,68 +142,7 @@ class RoomDatabase {
       return
     }
     this.rooms = this.rooms.filter(room => room.id !== roomId)
-    playerDatabase.removePlayersInRoom(roomId)
-  }
-
-  getPlayersOfRoom (roomId: string) {
-    return playerDatabase.getPlayersByRoomId(roomId)
-  }
-
-  addPlayerToRoom (roomId: string, player: SocketPlayer) {
-    const room = this.getRoom(roomId)
-    if (!room) {
-      return
-    }
-    playerDatabase.setPlayer({ ...player, room })
-  }
-
-  removePlayerFromRoom (_: string, playerId: string) {
-    playerDatabase.removePlayer(playerId)
   }
 }
 
 export const roomDatabase = new RoomDatabase()
-
-class PlayerDatabase {
-  private playerSocketIdToId: Map<RoomPlayer['socketId'], RoomPlayer['id']> = new Map()
-  private roomIdToPlayerIds: Map<Room['id'], Set<RoomPlayer['id']>> = new Map()
-  private players: Map<RoomPlayer['id'], RoomPlayer> = new Map()
-
-  setPlayer (player: RoomPlayer) {
-    this.players.set(player.id, player)
-    this.playerSocketIdToId.set(player.socketId, player.id)
-    this.roomIdToPlayerIds.get(player.room.id)?.add(player.id)
-  }
-
-  getPlayer (playerId: string) {
-    return this.players.get(playerId)
-  }
-
-  removePlayer (playerId: string) {
-    const player = this.getPlayer(playerId)
-    if (!player) {
-      return
-    }
-
-    this.players.delete(player.id)
-    this.playerSocketIdToId.delete(player.socketId)
-    this.roomIdToPlayerIds.get(player.room.id)?.delete(player.id)
-  }
-
-  getPlayerBySocketId (socketId: string) {
-    const playerId = this.playerSocketIdToId.get(socketId)
-    return playerId ? this.getPlayer(playerId) : undefined
-  }
-
-  getPlayersByRoomId (roomId: string) {
-    const playerIds = this.roomIdToPlayerIds.get(roomId)
-    return playerIds ? [...playerIds].map(playerId => this.getPlayer(playerId)!) : []
-  }
-
-  removePlayersInRoom (roomId: string) {
-    this.roomIdToPlayerIds.get(roomId)?.forEach(playerId => this.removePlayer(playerId))
-    this.roomIdToPlayerIds.delete(roomId)
-  }
-}
-
-export const playerDatabase = new PlayerDatabase()

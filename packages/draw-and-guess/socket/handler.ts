@@ -4,26 +4,35 @@
 import type { Server } from 'socket.io'
 
 import { debuglog } from '~/utils/debug'
-import { useTurso } from '~/utils/turso'
 import * as SocketEvents from '~/constants/socket-events'
 import type { Room, Player } from '~/interfaces'
 import { roomDatabase } from '~/utils'
 
-export const socketHandler = async (io: Server) => {
+export const socketHandler = (io: Server) => {
   debuglog('✔️ Hello from the socket handler')
-
-  const threads = await getThreads()
 
   io.on('connection', function (socket) {
     debuglog('socket connected', socket.id)
     socket.on('disconnect', function () {
       debuglog('socket disconnected', socket.id)
+      const player = playerDatabase.getPlayerBySocketId(socket.id)
+      if (!player) {
+        return
+      }
+      const room = player.room
+      socket.leave(room.id)
+      roomDatabase.removePlayerFromRoom(room.id, player.id)
+      io.to(room.id).emit(SocketEvents.PLAYER_LEAVE, {
+        from: player,
+        playerList: roomDatabase.getPlayersOfRoom(room.id),
+        system: true
+      })
     })
 
     socket.on(SocketEvents.ROOM_JOIN, (room: Room, player: Player) => {
       debuglog(`[Socket.io] joinRoom received room ${room.id} from user ${player.name}(${player.id})`)
       socket.join(room.id)
-      roomDatabase.addPlayerToRoom(room.id, player)
+      roomDatabase.addPlayerToRoom(room.id, { ...player, socketId: socket.id })
       io.to(room.id).emit(SocketEvents.PLAYER_JOIN, {
         from: player,
         playerList: roomDatabase.getPlayersOfRoom(room.id),
@@ -41,21 +50,47 @@ export const socketHandler = async (io: Server) => {
       })
     })
 
-    socket.on(SocketEvents.PLAYER_PAINT, function (room:Room, user:Player, message) {
-      debuglog(`[Socket.io] message received room ${room.id} from user ${user.id} ${user.name}}`)
-      const thread = threads.find(t => t.id === room.id)
-      if (thread) {
-        debuglog(`[Socket.io] emit paint room ${room.id} from user ${user.id} ${user.name}}`)
-        io.to(room.id).emit('paint', user, message)
+    socket.on(SocketEvents.ROOM_PAINT, function (room: Room, player: Player, data) {
+      debuglog(`[Socket.io] message received room ${room.id} from user ${player.id} ${player.name}}`)
+      const _room = roomDatabase.getRoom(room.id)
+      if (_room) {
+        io.to(room.id).emit(SocketEvents.PLAYER_PAINT, player, data)
+      }
+    })
+
+    socket.on(SocketEvents.ROOM_MESSAGE, function (room: Room, player: Player, data) {
+      debuglog(`[Socket.io] message received room ${room.id} from user ${player.id} ${player.name}}`)
+      const _room = roomDatabase.getRoom(room.id)
+      if (_room) {
+        io.to(room.id).emit(SocketEvents.PLAYER_MESSAGE, player, data)
+      }
+    })
+
+    socket.on(SocketEvents.ROOM_PLAYER_READY, function (room: Room, player: Player) {
+      debuglog(`[Socket.io] message received room ${room.id} from user ${player.id} ${player.name}}`)
+      const _room = roomDatabase.getRoom(room.id)
+      if (_room) {
+        // TODO: add room state
+        io.to(room.id).emit(SocketEvents.ROOM_STATE_CHANGE)
+      }
+    })
+
+    socket.on(SocketEvents.ROOM_PLAYER_GAME_START, function (room: Room, player: Player) {
+      debuglog(`[Socket.io] message received room ${room.id} from user ${player.id} ${player.name}}`)
+      const _room = roomDatabase.getRoom(room.id)
+      if (_room) {
+        // TODO: add room state
+        io.to(room.id).emit(SocketEvents.ROOM_STATE_CHANGE)
+      }
+    })
+
+    socket.on(SocketEvents.ROOM_NEXT_ROUND, function (room: Room, player: Player) {
+      debuglog(`[Socket.io] message received room ${room.id} from user ${player.id} ${player.name}}`)
+      const _room = roomDatabase.getRoom(room.id)
+      if (_room) {
+        // TODO: add room state
+        io.to(room.id).emit(SocketEvents.ROOM_STATE_CHANGE)
       }
     })
   })
-}
-
-const getThreads = async () => {
-  const client = useTurso()
-  const threadsQ = await client.execute(
-    'select * from threads'
-  )
-  return threadsQ.rows
 }

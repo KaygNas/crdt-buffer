@@ -1,54 +1,93 @@
 import type { Player, Room } from '~/interfaces'
 import { generateRandom } from '~/utils'
 
+interface SocketPlayer extends Player {
+  socketId: string
+}
+interface RoomPlayer extends SocketPlayer {
+  room: Room
+}
+
 class RoomDatabase {
   private rooms: Room[] = []
-  private playersOfRoom: Map<Room['id'], Player[]> = new Map()
 
-  public createRoom (player: Player) {
+  createRoom (player: SocketPlayer) {
     const room: Room = { id: generateRandom(8), name: `${player.name}的房间` }
     this.rooms.push(room)
     return room
   }
 
-  public getRoom (roomId: string) {
+  getRoom (roomId: string) {
     return this.rooms.find(room => room.id === roomId)
   }
 
-  public removeRoom (roomId: string) {
-    this.rooms = this.rooms.filter(room => room.id !== roomId)
-  }
-
-  public getPlayersOfRoom (roomId: string) {
-    return this.playersOfRoom.get(roomId)
-  }
-
-  public addPlayerToRoom (roomId: string, player: Player) {
-    const players = this.playersOfRoom.get(roomId) || []
-    players.push(player)
-    this.playersOfRoom.set(roomId, players)
-  }
-
-  public removePlayerFromRoom (roomId: string, playerId: string) {
-    const players = this.playersOfRoom.get(roomId)
-    if (!players) {
+  removeRoom (roomId: string) {
+    const room = this.getRoom(roomId)
+    if (!room) {
       return
     }
-    this.playersOfRoom.set(roomId, players.filter(player => player.id !== playerId))
+    this.rooms = this.rooms.filter(room => room.id !== roomId)
+    playerDatabase.removePlayersInRoom(roomId)
+  }
+
+  getPlayersOfRoom (roomId: string) {
+    return playerDatabase.getPlayersByRoomId(roomId)
+  }
+
+  addPlayerToRoom (roomId: string, player: SocketPlayer) {
+    const room = this.getRoom(roomId)
+    if (!room) {
+      return
+    }
+    playerDatabase.setPlayer({ ...player, room })
+  }
+
+  removePlayerFromRoom (_: string, playerId: string) {
+    playerDatabase.removePlayer(playerId)
   }
 }
 
 export const roomDatabase = new RoomDatabase()
 
 class PlayerDatabase {
-  private players: Player[] = []
+  private playerSocketIdToId: Map<RoomPlayer['socketId'], RoomPlayer['id']> = new Map()
+  private roomIdToPlayerIds: Map<Room['id'], Set<RoomPlayer['id']>> = new Map()
+  private players: Map<RoomPlayer['id'], RoomPlayer> = new Map()
 
-  public getPlayer (playerId: string) {
-    return this.players.find(player => player.id === playerId)
+  setPlayer (player: RoomPlayer) {
+    this.players.set(player.id, player)
+    this.playerSocketIdToId.set(player.socketId, player.id)
+    this.roomIdToPlayerIds.get(player.room.id)?.add(player.id)
   }
 
-  public removePlayer (playerId: string) {
-    this.players = this.players.filter(player => player.id !== playerId)
+  getPlayer (playerId: string) {
+    return this.players.get(playerId)
+  }
+
+  removePlayer (playerId: string) {
+    const player = this.getPlayer(playerId)
+    if (!player) {
+      return
+    }
+
+    this.players.delete(player.id)
+    this.playerSocketIdToId.delete(player.socketId)
+    this.roomIdToPlayerIds.get(player.room.id)?.delete(player.id)
+  }
+
+  getPlayerBySocketId (socketId: string) {
+    const playerId = this.playerSocketIdToId.get(socketId)
+    return playerId ? this.getPlayer(playerId) : undefined
+  }
+
+  getPlayersByRoomId (roomId: string) {
+    const playerIds = this.roomIdToPlayerIds.get(roomId)
+    return playerIds ? [...playerIds].map(playerId => this.getPlayer(playerId)!) : []
+  }
+
+  removePlayersInRoom (roomId: string) {
+    this.roomIdToPlayerIds.get(roomId)?.forEach(playerId => this.removePlayer(playerId))
+    this.roomIdToPlayerIds.delete(roomId)
   }
 }
 

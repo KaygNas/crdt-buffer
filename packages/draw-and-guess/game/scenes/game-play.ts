@@ -3,7 +3,7 @@ import { Graphics } from 'pixi.js'
 import { GamePlayHeader } from '../widgets/game-play-header'
 import { PlayerAvatarList } from '../widgets/game-play-player-avatar-list'
 import { Widget } from '../widgets/widget'
-import { GamePlayToolBox } from '../widgets/game-play-toolbox'
+import { GamePlayToolBox, MessageInput } from '../widgets/game-play-toolbox'
 import { GamePlayPaintBoard } from '../widgets/game-play-paint-board'
 import { Scene } from './scene'
 
@@ -71,6 +71,17 @@ export class GamePlay extends Scene {
     this.gamePlayLayout = layout
 
     this.addChild(layout)
+    this.listenEvents()
+  }
+
+  private listenEvents (): void {
+    const { gamePlayLayout } = this
+    gamePlayLayout.toolBox.messageInput.on(MessageInput.Events.SEND_MESSAGE, ({ message }) => {
+      console.log('send message', message)
+    })
+    gamePlayLayout.toolBox.messageInput.on(MessageInput.Events.ASK_FOR_TEAM, () => {
+      console.log('ask for team')
+    })
   }
 
   // TODO: Add methods for updating the game state.

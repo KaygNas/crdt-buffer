@@ -57,7 +57,7 @@ export class Game {
       this.initCreateRoomScene()
     })
 
-    io.emit(SocketEvents.JOIN_ROOM, room, user)
+    io.emit(SocketEvents.ROOM_JOIN, room, user)
     io.on(SocketEvents.PLAYER_JOIN, (data) => {
       roomJoin.playerList = data.playerList
       roomJoin.playerAvatarList.setPlayers(data.playerList)

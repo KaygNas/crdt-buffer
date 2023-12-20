@@ -20,7 +20,7 @@ export const socketHandler = async (io: Server) => {
       debuglog('socket disconnected', socket.id)
     })
 
-    socket.on(SocketEvents.JOIN_ROOM, (room: Room, player: Player) => {
+    socket.on(SocketEvents.ROOM_JOIN, (room: Room, player: Player) => {
       debuglog(`[Socket.io] joinRoom received room ${room.id} from user ${player.name}(${player.id})`)
       socket.join(room.id)
       roomDatabase.addPlayerToRoom(room.id, player)
@@ -31,7 +31,7 @@ export const socketHandler = async (io: Server) => {
       })
     })
 
-    socket.on(SocketEvents.LEAVE_ROOM, (room: Room, player: Player) => {
+    socket.on(SocketEvents.ROOM_LEAVE, (room: Room, player: Player) => {
       socket.leave(room.id)
       roomDatabase.removePlayerFromRoom(room.id, player.id)
       io.to(room.id).emit(SocketEvents.PLAYER_LEAVE, {
@@ -41,7 +41,7 @@ export const socketHandler = async (io: Server) => {
       })
     })
 
-    socket.on(SocketEvents.PAINT, function (room:Room, user:Player, message) {
+    socket.on(SocketEvents.PLAYER_PAINT, function (room:Room, user:Player, message) {
       debuglog(`[Socket.io] message received room ${room.id} from user ${user.id} ${user.name}}`)
       const thread = threads.find(t => t.id === room.id)
       if (thread) {

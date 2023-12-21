@@ -3,6 +3,8 @@ import { generateRandom } from '~/utils'
 
 type Room = WaitingRoom | PlayingRoom | PrizeGivingRoom
 
+// TODO: better implmentation to store and manipulate room data
+
 class RoomHelper {
   room: Room
   constructor (room: Room) {
@@ -69,6 +71,7 @@ class RoomHelper {
       answerTheme: room.answerTheme
     }
     this.room = _room
+    roomDatabase.setRoom(_room.id, _room)
   }
 
   setPrizing () {
@@ -88,6 +91,7 @@ class RoomHelper {
       name: room.name
     }
     this.room = _room
+    roomDatabase.setRoom(_room.id, _room)
   }
 
   setNextRound () {
@@ -105,6 +109,7 @@ class RoomHelper {
       totalTime: 60
     }
     room.currentGameRound = nextGameRound
+    roomDatabase.setRoom(room.id, room)
   }
 }
 
@@ -134,6 +139,11 @@ class RoomDatabase {
   getRoom (roomId: string) {
     const room = this.rooms.find(room => room.id === roomId)
     return createRoomHelper(room)
+  }
+
+  setRoom (roomId: string, room: Room) {
+    const index = this.rooms.findIndex(room => room.id === roomId)
+    this.rooms[index] = room
   }
 
   removeRoom (roomId: string) {

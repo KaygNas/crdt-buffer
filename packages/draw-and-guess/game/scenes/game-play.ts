@@ -5,8 +5,9 @@ import { PlayerAvatarList } from '../widgets/game-play-player-avatar-list'
 import { Widget } from '../widgets/widget'
 import { GamePlayToolBox, MessageInput } from '../widgets/game-play-toolbox'
 import { GamePlayPaintBoard } from '../widgets/game-play-paint-board'
+import { Danmaku } from '../widgets/game-play-danmaku'
 import { Scene } from './scene'
-import type { Player } from '~/interfaces'
+import type { PlayingRoom } from '~/interfaces'
 
 class GamePlayLayout extends Widget {
   background: Graphics
@@ -14,23 +15,25 @@ class GamePlayLayout extends Widget {
   paintBoard: GamePlayPaintBoard
   toolBox: GamePlayToolBox
   playerAvatarList: PlayerAvatarList
+  danmaku: Danmaku
 
-  constructor (opts: { header: GamePlayHeader, toolBox: GamePlayToolBox, paintBoard: GamePlayPaintBoard, playerAvatarList: PlayerAvatarList }) {
+  constructor (opts: { header: GamePlayHeader, toolBox: GamePlayToolBox, paintBoard: GamePlayPaintBoard, playerAvatarList: PlayerAvatarList, danmaku: Danmaku }) {
     super()
 
     this.background = new Graphics()
     this.view.addChild(this.background)
 
-    const { header, paintBoard, toolBox, playerAvatarList } = opts
+    const { header, paintBoard, toolBox, playerAvatarList, danmaku } = opts
     this.header = header
     this.paintBoard = paintBoard
     this.toolBox = toolBox
     this.playerAvatarList = playerAvatarList
-    this.addChild(header, paintBoard, toolBox, playerAvatarList)
+    this.danmaku = danmaku
+    this.addChild(header, paintBoard, toolBox, playerAvatarList, danmaku)
   }
 
   layout (): void {
-    const { header, background, paintBoard, toolBox, playerAvatarList, view } = this
+    const { header, background, paintBoard, toolBox, playerAvatarList, danmaku, view } = this
 
     background.clear()
     background.beginFill(0xAAAAAA).drawRect(0, 0, view.parent.width, view.parent.height)
@@ -43,48 +46,7 @@ class GamePlayLayout extends Widget {
         background.width,
         background.height - header.view.height - toolBox.view.height - playerAvatarList.view.height
       )
-  }
-}
-
-interface GameRound {
-  /** round number */
-  round: number
-  /** round answers */
-  answer: string
-  /** round paintist */
-  paintist: Player
-  /** round paintist teamates */
-  teamates: Player[]
-  /** round time */
-  time: number
-}
-
-class GameRoundController {
-  /** current round */
-  currentRound: GameRound
-
-  constructor (
-    /** answers to draw for each round */
-    public answers: string[],
-    /** players in the game */
-    public players: Player[]
-  ) {
-    this.currentRound = this.newRound(0)
-  }
-
-  nextRound (): void {
-    this.currentRound = this.newRound(this.currentRound.round + 1)
-  }
-
-  private newRound (round: number): GameRound {
-    const { answers, players } = this
-    return {
-      round,
-      answer: answers[round],
-      paintist: players[round],
-      teamates: [],
-      time: 60
-    }
+    danmaku.view.position.set(0, header.view.height)
   }
 }
 
@@ -93,31 +55,27 @@ class GameRoundController {
  */
 export class GamePlay extends Scene {
   static Events = {
-    GAME_END: 'game-end'
+    SEND_MESSAGE: 'send-message',
+    ASK_FOR_TEAM: 'ask-for-team'
   }
 
-  private gamePlayLayout: GamePlayLayout
-  private gameRoundControler: GameRoundController
+  gamePlayLayout: GamePlayLayout
 
-  constructor (app: Application) {
+  constructor (app: Application, room: PlayingRoom) {
     super(app)
-
-    const answers = ['test', 'test2']
-    const players: Player[] = [{ id: '1', avatar: '', name: 'A' }, { id: '2', avatar: '', name: 'B' }]
-    const gameRoundControler = new GameRoundController(answers, players)
-    this.gameRoundControler = gameRoundControler
 
     const header = new GamePlayHeader()
     const paintBoard = new GamePlayPaintBoard()
     const toolBox = new GamePlayToolBox()
     const playerAvatarList = new PlayerAvatarList()
+    const danmaku = new Danmaku()
 
-    const layout = new GamePlayLayout({ header, paintBoard, toolBox, playerAvatarList })
+    const layout = new GamePlayLayout({ header, paintBoard, toolBox, playerAvatarList, danmaku })
     this.gamePlayLayout = layout
 
-    header.timer.setTimer(gameRoundControler.currentRound.time)
-    header.answer.setAnswer(gameRoundControler.currentRound.answer)
-    playerAvatarList.setPlayers(gameRoundControler.players)
+    header.timer.setTimer(room.currentGameRound.totalTime)
+    header.answer.setAnswer(room.currentGameRound.answer)
+    playerAvatarList.setPlayers(room.players)
 
     this.addChild(layout)
     this.listenEvents()
@@ -127,9 +85,11 @@ export class GamePlay extends Scene {
     const { gamePlayLayout } = this
     gamePlayLayout.toolBox.messageInput.on(MessageInput.Events.SEND_MESSAGE, ({ message }) => {
       console.log('send message', message)
+      this.emit(GamePlay.Events.SEND_MESSAGE, { message })
     })
     gamePlayLayout.toolBox.messageInput.on(MessageInput.Events.ASK_FOR_TEAM, () => {
       console.log('ask for team')
+      this.emit(GamePlay.Events.ASK_FOR_TEAM)
     })
   }
 

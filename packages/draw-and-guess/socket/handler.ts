@@ -17,14 +17,17 @@ export const socketHandler = (io: Server) => {
       debuglog('socket disconnected', socket.id)
     })
 
-    socket.on(SocketEvents.ROOM_JOIN, (room: Room, player: Player) => {
+    socket.on(SocketEvents.ROOM_JOIN, async (room: Room, player: Player) => {
       debuglog(`[Socket.io] joinRoom received room ${room.id} from user ${player.name}(${player.id})`)
       const _room = roomDatabase.getRoom(room.id)
       if (!_room) {
         return
       }
 
-      socket.join(_room.room.id)
+      await socket.join(_room.room.id)
+
+      debuglog('socket rooms ', socket.rooms.values())
+
       _room.addPlayer(player)
       io.to(_room.room.id).emit(SocketEvents.PLAYER_JOIN, {
         from: player,
@@ -58,11 +61,14 @@ export const socketHandler = (io: Server) => {
     })
 
     socket.on(SocketEvents.ROOM_MESSAGE, function (room: Room, player: Player, data) {
-      debuglog(`[Socket.io] message received room ${room.id} from user ${player.id} ${player.name}}`)
+      debuglog(`[Socket.io] [${SocketEvents.ROOM_MESSAGE}] message received room ${room.id} from user ${player.id} ${player.name}}`)
       const _room = roomDatabase.getRoom(room.id)
       if (!_room) {
         return
       }
+
+      debuglog('socket rooms ', socket.rooms.values())
+
       io.to(_room.room.id).emit(SocketEvents.PLAYER_MESSAGE, player, data)
     })
 

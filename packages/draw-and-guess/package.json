@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@pixi/ui": "^0.10.1",
+    "@tweenjs/tween.js": "^21.0.0",
     "@vueuse/core": "^10.7.0",
     "crdt-buffer": "workspace:^",
     "eventemitter3": "^5.0.1",
